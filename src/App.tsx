@@ -36,7 +36,7 @@ export default function App() {
   // Processing state
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processingStage, setProcessingStage] = useState<
-    'idle' | 'adjusting_garment' | 'generating_copy' | 'completed'
+    'idle' | 'adjusting_garment' | 'generating_copy' | 'replacing_background' | 'completed'
   >('idle');
   const [executionError, setExecutionError] = useState<string | null>(null);
 
@@ -64,6 +64,8 @@ export default function App() {
         garmentDataUri: payload.garmentImage.dataUri,
         garmentBase64Raw: payload.garmentImage.base64Raw,
         category: payload.category,
+        backgroundType: payload.backgroundType,
+        customBackgroundBase64: payload.customBackgroundImage?.dataUri,
         price: payload.price,
         sizes: payload.sizes,
         storeName: settings.storeName || 'Boutique Rota',

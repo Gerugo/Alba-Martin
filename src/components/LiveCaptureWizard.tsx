@@ -12,9 +12,10 @@ import {
   Euro,
   BookmarkCheck,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react';
-import { ProductCategory, CompressedImageResult } from '../types/catalog';
+import { ProductCategory, BackgroundType, CompressedImageResult } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
 
@@ -24,12 +25,14 @@ export interface ProcessPayload {
   category: ProductCategory;
   price: number;
   sizes: string[];
+  backgroundType: BackgroundType;
+  customBackgroundImage?: CompressedImageResult | null;
 }
 
 interface LiveCaptureWizardProps {
   onProcess: (payload: ProcessPayload) => void;
   isProcessing: boolean;
-  processingStage?: 'idle' | 'adjusting_garment' | 'generating_copy' | 'completed';
+  processingStage?: 'idle' | 'adjusting_garment' | 'generating_copy' | 'replacing_background' | 'completed';
 }
 
 const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'Única'];
@@ -39,6 +42,15 @@ const CATEGORY_OPTIONS: { id: ProductCategory; label: string }[] = [
   { id: 'tops', label: 'Parte superior / Chaqueta' },
   { id: 'bottoms', label: 'Pantalón / Falda' },
   { id: 'one-pieces', label: 'Vestido / Cuerpo entero' },
+];
+
+const BACKGROUND_OPTIONS: { id: BackgroundType; label: string; desc: string }[] = [
+  { id: 'original', label: 'Tienda original', desc: 'Conserva el fondo original de la modelo' },
+  { id: 'beach', label: 'Playa y verano', desc: 'Arena dorada, luz cálida de verano y mar suave' },
+  { id: 'studio', label: 'Estudio minimalista', desc: 'Fondo neutro pulcro de fotografía de moda' },
+  { id: 'urban', label: 'Calle / Terraza urbana', desc: 'Fachada elegante y terraza exterior con luz natural' },
+  { id: 'garden', label: 'Jardín mediterráneo', desc: 'Terraza vegetal, olivos y muro de piedra' },
+  { id: 'custom', label: 'Subir fondo propio', desc: 'Rincón de la tienda o foto propia de fondo' },
 ];
 
 export default function LiveCaptureWizard({
@@ -59,6 +71,11 @@ export default function LiveCaptureWizard({
   const [sizes, setSizes] = useState<string[]>(['S', 'M', 'L']);
   const [isCompressingGarment, setIsCompressingGarment] = useState<boolean>(false);
 
+  // Background selector state
+  const [backgroundType, setBackgroundType] = useState<BackgroundType>('original');
+  const [customBgImage, setCustomBgImage] = useState<CompressedImageResult | null>(null);
+  const [isCompressingBg, setIsCompressingBg] = useState<boolean>(false);
+
   // Error alert
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -67,6 +84,8 @@ export default function LiveCaptureWizard({
   const modelGalleryInputRef = useRef<HTMLInputElement>(null);
   const garmentCameraInputRef = useRef<HTMLInputElement>(null);
   const garmentGalleryInputRef = useRef<HTMLInputElement>(null);
+  const customBgCameraInputRef = useRef<HTMLInputElement>(null);
+  const customBgGalleryInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved model from storage on mount
   useEffect(() => {
@@ -163,6 +182,26 @@ export default function LiveCaptureWizard({
     setModelImage(null);
   };
 
+  // Handle custom background change
+  const handleCustomBgChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setErrorMessage(null);
+      setIsCompressingBg(true);
+      const compressed = await compressImage(file);
+      setCustomBgImage(compressed);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('No se pudo procesar la foto de fondo. Prueba con otra imagen.');
+    } finally {
+      setIsCompressingBg(false);
+      if (customBgCameraInputRef.current) customBgCameraInputRef.current.value = '';
+      if (customBgGalleryInputRef.current) customBgGalleryInputRef.current.value = '';
+    }
+  };
+
   // Handle action submission
   const handleAction = () => {
     if (!modelImage) {
@@ -180,6 +219,8 @@ export default function LiveCaptureWizard({
       category,
       price: Number(price) || 29.95,
       sizes,
+      backgroundType,
+      customBackgroundImage: customBgImage,
     });
   };
 
@@ -569,6 +610,138 @@ export default function LiveCaptureWizard({
             </div>
           </div>
         </div>
+
+        {/* Selector de Fondo / Ambiente de la foto */}
+        <div className="space-y-3 pt-3 border-t border-stone-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
+              Escenario / Fondo de la foto
+            </label>
+            {backgroundType !== 'original' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBackgroundType('original');
+                  setCustomBgImage(null);
+                }}
+                className="text-[11px] text-stone-500 hover:text-stone-800 underline"
+              >
+                Restablecer a tienda
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {BACKGROUND_OPTIONS.map((bg) => {
+              const active = backgroundType === bg.id;
+              return (
+                <button
+                  key={bg.id}
+                  type="button"
+                  onClick={() => setBackgroundType(bg.id)}
+                  className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
+                    active
+                      ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                      : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-xs font-bold truncate">{bg.label}</span>
+                    {active && <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 ml-1" />}
+                  </div>
+                  <p className={`text-[10px] leading-tight line-clamp-2 ${active ? 'text-stone-300' : 'text-stone-500'}`}>
+                    {bg.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Upload card if custom background chosen */}
+          {backgroundType === 'custom' && (
+            <div className="mt-2.5 p-3 bg-stone-50 rounded-2xl border border-dashed border-stone-300">
+              <input
+                ref={customBgCameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleCustomBgChange}
+                className="hidden"
+              />
+              <input
+                ref={customBgGalleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCustomBgChange}
+                className="hidden"
+              />
+
+              {customBgImage ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={customBgImage.dataUri}
+                    alt="Fondo personalizado"
+                    className="w-16 h-16 rounded-xl object-cover border border-stone-200 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-stone-900 truncate">Fondo propio cargado</p>
+                    <p className="text-[10px] text-stone-500">
+                      {customBgImage.width}x{customBgImage.height} px · {formatBytes(customBgImage.fileSizeBytes)}
+                    </p>
+                    <div className="flex gap-2.5 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => customBgGalleryInputRef.current?.click()}
+                        className="text-[11px] font-semibold text-stone-800 underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomBgImage(null)}
+                        className="text-[11px] font-semibold text-red-600 hover:text-red-700"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-2">
+                  <p className="text-xs font-semibold text-stone-800 mb-2">
+                    Sube una foto de un rincón de la tienda o un fondo especial
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => customBgCameraInputRef.current?.click()}
+                      disabled={isCompressingBg}
+                      className="px-3 py-1.5 bg-stone-900 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                      Hacer foto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => customBgGalleryInputRef.current?.click()}
+                      disabled={isCompressingBg}
+                      className="px-3 py-1.5 bg-white border border-stone-300 text-stone-700 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:bg-stone-50"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-stone-500" />
+                      Galería
+                    </button>
+                  </div>
+                  {isCompressingBg && (
+                    <p className="text-[10px] text-stone-500 mt-2 flex items-center justify-center gap-1">
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Procesando foto de fondo...
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ======================================================== */}
@@ -582,9 +755,10 @@ export default function LiveCaptureWizard({
               <div className="flex items-center justify-between text-xs font-medium">
                 <span className="flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
-                  {processingStage === 'adjusting_garment' && '1/2 Ajustando prenda al cuerpo de la modelo...'}
-                  {processingStage === 'generating_copy' && '2/2 Redactando ficha SEO y post para Instagram...'}
-                  {processingStage === 'completed' && '¡Completado con éxito!'}
+                  {processingStage === 'adjusting_garment' && '1/3 Ajustando prenda al cuerpo de la modelo...'}
+                  {processingStage === 'generating_copy' && '2/3 Redactando ficha SEO y texto WhatsApp...'}
+                  {processingStage === 'replacing_background' && '3/3 Integrando en el escenario de fondo...'}
+                  {processingStage === 'completed' && 'Completado con éxito'}
                   {processingStage === 'idle' && 'Iniciando procesamiento IA...'}
                 </span>
                 <span className="text-[10px] text-stone-400 font-mono">IA en vivo</span>
@@ -593,9 +767,11 @@ export default function LiveCaptureWizard({
                 <div
                   className={`h-full bg-emerald-500 transition-all duration-700 ${
                     processingStage === 'adjusting_garment'
-                      ? 'w-1/2'
+                      ? 'w-1/3'
                       : processingStage === 'generating_copy'
-                      ? 'w-5/6'
+                      ? 'w-2/3'
+                      : processingStage === 'replacing_background'
+                      ? 'w-11/12'
                       : 'w-full'
                   }`}
                 />

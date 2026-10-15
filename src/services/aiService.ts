@@ -1,11 +1,13 @@
 import { fal } from '@fal-ai/client';
-import { CatalogProduct, ProductCategory } from '../types/catalog';
+import { CatalogProduct, ProductCategory, BackgroundType } from '../types/catalog';
 
 export interface TryOnParams {
   modelDataUri: string;
   garmentDataUri: string;
   garmentBase64Raw: string;
   category: ProductCategory;
+  backgroundType?: BackgroundType;
+  customBackgroundBase64?: string;
   price: number;
   sizes: string[];
   storeName: string;
@@ -13,7 +15,7 @@ export interface TryOnParams {
   geminiKey: string;
   geminiModel?: string;
   simulationMode?: boolean;
-  onStageChange?: (stage: 'adjusting_garment' | 'generating_copy') => void;
+  onStageChange?: (stage: 'adjusting_garment' | 'generating_copy' | 'replacing_background') => void;
 }
 
 export interface GeneratedMetadata {
@@ -232,7 +234,68 @@ Genera un objeto JSON EXACTO con las siguientes claves:
 }
 
 /**
- * Orchestrates Parallel Processing with Promise.all
+ * Replaces the background of the try-on image using fal-ai/bria/background/replace.
+ * Preserves the model and garment with realistic lighting.
+ */
+export async function replaceImageBackground(
+  imageUrl: string,
+  backgroundType: BackgroundType,
+  customBackgroundUri: string | undefined,
+  falKey: string,
+  simulationMode = false
+): Promise<string> {
+  if (backgroundType === 'original' || !backgroundType) {
+    return imageUrl;
+  }
+
+  if (simulationMode) {
+    await new Promise((res) => setTimeout(res, 1800));
+    return imageUrl;
+  }
+
+  if (!falKey || falKey.trim() === '') {
+    return imageUrl;
+  }
+
+  try {
+    fal.config({ credentials: falKey.trim() });
+
+    const backgroundPrompts: Record<string, string> = {
+      beach: 'Sunny tropical beach with golden sand, soft ocean waves, warm summer sunlight, elegant depth of field',
+      studio: 'Minimalist luxury fashion photography studio, clean warm off-white seamless wall, diffuse soft lighting',
+      urban: 'Chic European city street, elegant boutique stone facade, blurred outdoor cafe terrace, natural daylight',
+      garden: 'Lush Mediterranean garden terrace with olive trees and stone wall, soft warm natural afternoon lighting',
+    };
+
+    const inputPayload: Record<string, unknown> = {
+      image_url: imageUrl,
+      fast: true,
+      refine_prompt: true,
+    };
+
+    if (backgroundType === 'custom' && customBackgroundUri) {
+      inputPayload.ref_image_url = customBackgroundUri;
+    } else {
+      inputPayload.prompt = backgroundPrompts[backgroundType] || backgroundPrompts.studio;
+    }
+
+    const result = await fal.subscribe('fal-ai/bria/background/replace', {
+      input: inputPayload as any,
+      logs: false,
+    });
+
+    const data = result.data as { images?: { url: string }[]; image?: { url: string } };
+    const finalUrl = data?.image?.url || data?.images?.[0]?.url;
+
+    return finalUrl || imageUrl;
+  } catch (err) {
+    console.warn('No se pudo reemplazar el fondo, conservando foto original con fondo de la modelo:', err);
+    return imageUrl;
+  }
+}
+
+/**
+ * Orchestrates Parallel Processing with Promise.all and optional background replacement
  */
 export async function executeLiveTryOnAndCatalog(
   params: TryOnParams
@@ -253,8 +316,8 @@ export async function executeLiveTryOnAndCatalog(
 
   onStageChange?.('adjusting_garment');
 
-  // Trigger both tasks concurrently
-  const [resultImageUrl, metadata] = await Promise.all([
+  // Trigger both try-on and copywriting concurrently
+  const [initialImageUrl, metadata] = await Promise.all([
     runVirtualTryOn(modelDataUri, garmentDataUri, category, falKey, simulationMode),
     (async () => {
       onStageChange?.('generating_copy');
@@ -271,6 +334,19 @@ export async function executeLiveTryOnAndCatalog(
     })(),
   ]);
 
+  // Optional background replacement stage
+  let resultImageUrl = initialImageUrl;
+  if (params.backgroundType && params.backgroundType !== 'original') {
+    onStageChange?.('replacing_background');
+    resultImageUrl = await replaceImageBackground(
+      initialImageUrl,
+      params.backgroundType,
+      params.customBackgroundBase64,
+      falKey,
+      simulationMode
+    );
+  }
+
   // Generate unique product record
   const randomSuffix = Math.floor(100 + Math.random() * 900);
   const prefix = `ROT-${randomSuffix}`;
@@ -284,6 +360,7 @@ export async function executeLiveTryOnAndCatalog(
     descriptionHtml: metadata.descriptionHtml,
     vendor: storeName || 'Boutique Rota',
     productCategory: category,
+    backgroundType: params.backgroundType || 'original',
     tags: metadata.tags,
     price,
     sizes,

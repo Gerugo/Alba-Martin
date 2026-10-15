@@ -1,4 +1,5 @@
 export type ProductCategory = 'tops' | 'bottoms' | 'one-pieces' | 'auto';
+export type BackgroundType = 'original' | 'beach' | 'studio' | 'urban' | 'garden' | 'custom';
 
 export interface CatalogProduct {
   id: string;
@@ -16,6 +17,7 @@ export interface CatalogProduct {
   garmentPhotoBase64: string;
   resultImageUrl: string;
   instagramCaption: string;
+  backgroundType?: BackgroundType;
 }
 
 export interface DemoSettings {

@@ -228,6 +228,15 @@ export default function SavedCatalogTab({
                       <span className="text-[10px] bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-mono">
                         {item.sizes.join(', ')}
                       </span>
+                      {item.backgroundType && item.backgroundType !== 'original' && (
+                        <span className="text-[10px] bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium">
+                          {item.backgroundType === 'beach' && 'Fondo: Playa'}
+                          {item.backgroundType === 'studio' && 'Fondo: Estudio'}
+                          {item.backgroundType === 'urban' && 'Fondo: Urbano'}
+                          {item.backgroundType === 'garden' && 'Fondo: Jardín'}
+                          {item.backgroundType === 'custom' && 'Fondo: Personalizado'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
