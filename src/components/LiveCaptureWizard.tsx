@@ -18,10 +18,13 @@ import {
 import { ProductCategory, BackgroundType, CompressedImageResult } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
+import { TryOnStage } from '../services/aiService';
 
 export interface ProcessPayload {
   modelImage: CompressedImageResult;
   garmentImage: CompressedImageResult;
+  secondaryGarmentImage?: CompressedImageResult | null;
+  isOutfit: boolean;
   category: ProductCategory;
   price: number;
   sizes: string[];
@@ -32,7 +35,7 @@ export interface ProcessPayload {
 interface LiveCaptureWizardProps {
   onProcess: (payload: ProcessPayload) => void;
   isProcessing: boolean;
-  processingStage?: 'idle' | 'adjusting_garment' | 'generating_copy' | 'replacing_background' | 'completed';
+  processingStage?: TryOnStage;
 }
 
 const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'Única'];
@@ -64,12 +67,15 @@ export default function LiveCaptureWizard({
   const [hasSavedModelOnDisk, setHasSavedModelOnDisk] = useState<boolean>(false);
   const [isCompressingModel, setIsCompressingModel] = useState<boolean>(false);
 
-  // Garment state
+  // Garment & Outfit state
+  const [isOutfit, setIsOutfit] = useState<boolean>(false);
   const [garmentImage, setGarmentImage] = useState<CompressedImageResult | null>(null);
+  const [secondaryGarmentImage, setSecondaryGarmentImage] = useState<CompressedImageResult | null>(null);
   const [category, setCategory] = useState<ProductCategory>('auto');
   const [price, setPrice] = useState<number>(29.95);
   const [sizes, setSizes] = useState<string[]>(['S', 'M', 'L']);
   const [isCompressingGarment, setIsCompressingGarment] = useState<boolean>(false);
+  const [isCompressingSecondary, setIsCompressingSecondary] = useState<boolean>(false);
 
   // Background selector state
   const [backgroundType, setBackgroundType] = useState<BackgroundType>('original');
@@ -84,6 +90,8 @@ export default function LiveCaptureWizard({
   const modelGalleryInputRef = useRef<HTMLInputElement>(null);
   const garmentCameraInputRef = useRef<HTMLInputElement>(null);
   const garmentGalleryInputRef = useRef<HTMLInputElement>(null);
+  const secondaryCameraInputRef = useRef<HTMLInputElement>(null);
+  const secondaryGalleryInputRef = useRef<HTMLInputElement>(null);
   const customBgCameraInputRef = useRef<HTMLInputElement>(null);
   const customBgGalleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -149,6 +157,25 @@ export default function LiveCaptureWizard({
     }
   };
 
+  // Handle Secondary Garment Photo upload (for outfit bottom)
+  const handleSecondaryGarmentFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setErrorMessage(null);
+      setIsCompressingSecondary(true);
+      const compressed = await compressImage(file);
+      setSecondaryGarmentImage(compressed);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('No se pudo procesar la foto de la parte inferior. Prueba con otra imagen.');
+    } finally {
+      setIsCompressingSecondary(false);
+      e.target.value = '';
+    }
+  };
+
   // Toggle size selection
   const toggleSize = (size: string) => {
     if (sizes.includes(size)) {
@@ -209,22 +236,37 @@ export default function LiveCaptureWizard({
       return;
     }
     if (!garmentImage) {
-      setErrorMessage('Por favor, añade o haz la foto a la prenda en percha (Paso 2).');
+      setErrorMessage(
+        isOutfit
+          ? 'Por favor, añade la foto de la parte superior (blusa, chaqueta, top).'
+          : 'Por favor, añade o haz la foto a la prenda en percha (Paso 2).'
+      );
+      return;
+    }
+    if (isOutfit && !secondaryGarmentImage) {
+      setErrorMessage('Por favor, añade la foto de la parte inferior del conjunto (pantalón, falda).');
       return;
     }
     setErrorMessage(null);
     onProcess({
       modelImage,
       garmentImage,
-      category,
-      price: Number(price) || 29.95,
+      secondaryGarmentImage,
+      isOutfit,
+      category: isOutfit ? 'one-pieces' : category,
+      price: Number(price) || (isOutfit ? 59.95 : 29.95),
       sizes,
       backgroundType,
       customBackgroundImage: customBgImage,
     });
   };
 
-  const canSubmit = Boolean(modelImage && garmentImage && !isProcessing);
+  const canSubmit = Boolean(
+    modelImage &&
+    garmentImage &&
+    (!isOutfit || secondaryGarmentImage) &&
+    !isProcessing
+  );
 
   return (
     <div className="space-y-5 pb-28">
@@ -274,6 +316,21 @@ export default function LiveCaptureWizard({
         accept="image/*"
         className="hidden"
         onChange={handleGarmentFileChange}
+      />
+      <input
+        ref={secondaryCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleSecondaryGarmentFileChange}
+      />
+      <input
+        ref={secondaryGalleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSecondaryGarmentFileChange}
       />
 
       {/* ======================================================== */}
@@ -450,125 +507,312 @@ export default function LiveCaptureWizard({
             <div>
               <h2 className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
                 <ShoppingBag className="w-4 h-4 text-stone-700" />
-                Foto de la Prenda en Percha + Datos
+                {isOutfit ? 'Fotos del Conjunto (Total Look) + Datos' : 'Foto de la Prenda en Percha + Datos'}
               </h2>
               <p className="text-[11px] text-stone-500">
-                Captura la prenda colgada y fija precio/tallas
+                {isOutfit ? 'Captura la parte superior y la inferior para probar el look' : 'Captura la prenda colgada y fija precio/tallas'}
               </p>
             </div>
           </div>
-          {garmentImage && (
+          {(isOutfit ? (garmentImage && secondaryGarmentImage) : garmentImage) && (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/50">
-              <Check className="w-3 h-3 stroke-[3]" /> Lista
+              <Check className="w-3 h-3 stroke-[3]" /> {isOutfit ? 'Conjunto listo' : 'Lista'}
             </span>
           )}
         </div>
 
-        {/* Garment Image Area */}
-        {garmentImage ? (
-          <div className="mb-4 space-y-2">
-            <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] max-h-72 flex items-center justify-center">
-              <img
-                src={garmentImage.dataUri}
-                alt="Prenda en percha"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-md rounded-xl px-3 py-1.5 text-white flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 font-mono">
-                  <Sparkles className="w-3 h-3 text-emerald-300" />
-                  {formatBytes(garmentImage.fileSizeBytes)}
+        {/* Selector de Modalidad: Prenda individual vs Conjunto 2 piezas */}
+        <div className="bg-stone-100 p-1 rounded-2xl flex items-center mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setIsOutfit(false);
+              setCategory('auto');
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
+              !isOutfit
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            Prenda individual
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOutfit(true);
+              if (price === 29.95) setPrice(59.95);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
+              isOutfit
+                ? 'bg-stone-900 text-white shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            Conjunto 2 Piezas (Total Look)
+          </button>
+        </div>
+
+        {/* MODO CONJUNTO 2 PIEZAS: TOP + BOTTOM */}
+        {isOutfit ? (
+          <div className="space-y-3 mb-4">
+            {/* Pieza 1: Parte Superior */}
+            <div className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-stone-900 text-white text-[10px] flex items-center justify-center font-mono">1</span>
+                  Parte Superior (Blusa, Blazer, Top...)
                 </span>
-                <span className="text-stone-300 text-[10px]">
-                  {garmentImage.width}×{garmentImage.height}px
-                </span>
+                {garmentImage && (
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Lista
+                  </span>
+                )}
               </div>
+
+              {garmentImage ? (
+                <div className="space-y-2">
+                  <div className="relative rounded-xl overflow-hidden bg-white border border-stone-200 aspect-[4/3] max-h-48 flex items-center justify-center">
+                    <img src={garmentImage.dataUri} alt="Parte superior" className="w-full h-full object-cover" />
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-black/75 backdrop-blur-md rounded-lg px-2.5 py-1 text-white flex items-center justify-between text-[10px]">
+                      <span className="font-mono">{formatBytes(garmentImage.fileSizeBytes)}</span>
+                      <span>{garmentImage.width}×{garmentImage.height}px</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => garmentCameraInputRef.current?.click()}
+                      className="flex-1 py-2 px-2.5 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5 hover:bg-stone-50"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
+                      Repetir foto superior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => garmentGalleryInputRef.current?.click()}
+                      className="py-2 px-2.5 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5 hover:bg-stone-50"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-stone-500" />
+                      Galería
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => garmentCameraInputRef.current?.click()}
+                    disabled={isCompressingGarment}
+                    className="w-full py-3 px-3 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-stone-800"
+                  >
+                    {isCompressingGarment ? (
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Procesando...
+                      </span>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4 text-emerald-400" />
+                        Hacer foto a la parte superior
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => garmentGalleryInputRef.current?.click()}
+                    disabled={isCompressingGarment}
+                    className="w-full py-2 px-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 font-semibold text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-stone-500" />
+                    Elegir superior de la galería
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => garmentCameraInputRef.current?.click()}
-                className="flex-1 py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
-                Repetir foto prenda
-              </button>
-              <button
-                type="button"
-                onClick={() => garmentGalleryInputRef.current?.click()}
-                className="py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5"
-              >
-                <Upload className="w-3.5 h-3.5 text-stone-500" />
-                Galería
-              </button>
+
+            {/* Pieza 2: Parte Inferior */}
+            <div className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-stone-900 text-white text-[10px] flex items-center justify-center font-mono">2</span>
+                  Parte Inferior (Pantalón, Falda, Short...)
+                </span>
+                {secondaryGarmentImage && (
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Lista
+                  </span>
+                )}
+              </div>
+
+              {secondaryGarmentImage ? (
+                <div className="space-y-2">
+                  <div className="relative rounded-xl overflow-hidden bg-white border border-stone-200 aspect-[4/3] max-h-48 flex items-center justify-center">
+                    <img src={secondaryGarmentImage.dataUri} alt="Parte inferior" className="w-full h-full object-cover" />
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-black/75 backdrop-blur-md rounded-lg px-2.5 py-1 text-white flex items-center justify-between text-[10px]">
+                      <span className="font-mono">{formatBytes(secondaryGarmentImage.fileSizeBytes)}</span>
+                      <span>{secondaryGarmentImage.width}×{secondaryGarmentImage.height}px</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => secondaryCameraInputRef.current?.click()}
+                      className="flex-1 py-2 px-2.5 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5 hover:bg-stone-50"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
+                      Repetir foto inferior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => secondaryGalleryInputRef.current?.click()}
+                      className="py-2 px-2.5 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5 hover:bg-stone-50"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-stone-500" />
+                      Galería
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => secondaryCameraInputRef.current?.click()}
+                    disabled={isCompressingSecondary}
+                    className="w-full py-3 px-3 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-stone-800"
+                  >
+                    {isCompressingSecondary ? (
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Procesando...
+                      </span>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4 text-emerald-400" />
+                        Hacer foto a la parte inferior
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => secondaryGalleryInputRef.current?.click()}
+                    disabled={isCompressingSecondary}
+                    className="w-full py-2 px-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 font-semibold text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-stone-500" />
+                    Elegir inferior de la galería
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="mb-4 space-y-2">
-            <button
-              type="button"
-              onClick={() => garmentCameraInputRef.current?.click()}
-              disabled={isCompressingGarment}
-              className="w-full py-4 px-4 rounded-2xl bg-stone-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] transition-all hover:bg-stone-800"
-            >
-              {isCompressingGarment ? (
-                <span className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Comprimiendo foto...
-                </span>
-              ) : (
-                <>
-                  <Camera className="w-5 h-5 text-emerald-400" />
-                  Hacer foto a la prenda en percha
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => garmentGalleryInputRef.current?.click()}
-              disabled={isCompressingGarment}
-              className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
-            >
-              <Upload className="w-4 h-4 text-stone-500" />
-              Elegir de la galería
-            </button>
-          </div>
-        )}
-
-        {/* Category Selector Chips */}
-        <div className="space-y-2 mb-4">
-          <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-stone-500" />
-            Tipo de prenda
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {CATEGORY_OPTIONS.map((opt) => {
-              const active = category === opt.id;
-              return (
+          /* MODO PRENDA INDIVIDUAL */
+          <>
+            {garmentImage ? (
+              <div className="mb-4 space-y-2">
+                <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] max-h-72 flex items-center justify-center">
+                  <img
+                    src={garmentImage.dataUri}
+                    alt="Prenda en percha"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-md rounded-xl px-3 py-1.5 text-white flex items-center justify-between text-[11px]">
+                    <span className="flex items-center gap-1 font-mono">
+                      <Sparkles className="w-3 h-3 text-emerald-300" />
+                      {formatBytes(garmentImage.fileSizeBytes)}
+                    </span>
+                    <span className="text-stone-300 text-[10px]">
+                      {garmentImage.width}×{garmentImage.height}px
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => garmentCameraInputRef.current?.click()}
+                    className="flex-1 py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
+                    Repetir foto prenda
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => garmentGalleryInputRef.current?.click()}
+                    className="py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-stone-500" />
+                    Galería
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 space-y-2">
                 <button
-                  key={opt.id}
                   type="button"
-                  onClick={() => setCategory(opt.id)}
-                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border text-left ${
-                    active
-                      ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
-                      : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
-                  }`}
+                  onClick={() => garmentCameraInputRef.current?.click()}
+                  disabled={isCompressingGarment}
+                  className="w-full py-4 px-4 rounded-2xl bg-stone-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] transition-all hover:bg-stone-800"
                 >
-                  <span className="truncate">{opt.label}</span>
-                  {active && <Check className="w-3.5 h-3.5 text-white flex-shrink-0" />}
+                  {isCompressingGarment ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Comprimiendo foto...
+                    </span>
+                  ) : (
+                    <>
+                      <Camera className="w-5 h-5 text-emerald-400" />
+                      Hacer foto a la prenda en percha
+                    </>
+                  )}
                 </button>
-              );
-            })}
-          </div>
-        </div>
+                <button
+                  type="button"
+                  onClick={() => garmentGalleryInputRef.current?.click()}
+                  disabled={isCompressingGarment}
+                  className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Upload className="w-4 h-4 text-stone-500" />
+                  Elegir de la galería
+                </button>
+              </div>
+            )}
+
+            {/* Category Selector Chips */}
+            <div className="space-y-2 mb-4">
+              <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-stone-500" />
+                Tipo de prenda
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {CATEGORY_OPTIONS.map((opt) => {
+                  const active = category === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCategory(opt.id)}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border text-left ${
+                        active
+                          ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                          : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                      }`}
+                    >
+                      <span className="truncate">{opt.label}</span>
+                      {active && <Check className="w-3.5 h-3.5 text-white flex-shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Price & Sizes Single Row / Responsive Section */}
         <div className="space-y-3 pt-3 border-t border-stone-100">
           {/* Price input */}
           <div className="flex items-center gap-3">
-            <div className="w-32 flex-shrink-0">
+            <div className="w-36 flex-shrink-0">
               <label className="text-[11px] font-semibold text-stone-600 block mb-1">
-                Precio (€)
+                {isOutfit ? 'Precio Total Look (€)' : 'Precio (€)'}
               </label>
               <div className="relative">
                 <input
@@ -756,8 +1000,10 @@ export default function LiveCaptureWizard({
                 <span className="flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
                   {processingStage === 'adjusting_garment' && '1/3 Ajustando prenda al cuerpo de la modelo...'}
-                  {processingStage === 'generating_copy' && '2/3 Redactando ficha SEO y texto WhatsApp...'}
-                  {processingStage === 'replacing_background' && '3/3 Integrando en el escenario de fondo...'}
+                  {processingStage === 'adjusting_garment_top' && '1/4 Ajustando parte superior a la modelo...'}
+                  {processingStage === 'adjusting_garment_bottom' && '2/4 Ajustando parte inferior (Total Look)...'}
+                  {processingStage === 'generating_copy' && (isOutfit ? '3/4 Redactando ficha comercial del conjunto...' : '2/3 Redactando ficha SEO y texto WhatsApp...')}
+                  {processingStage === 'replacing_background' && (isOutfit ? '4/4 Integrando en el escenario de fondo...' : '3/3 Integrando en el escenario de fondo...')}
                   {processingStage === 'completed' && 'Completado con éxito'}
                   {processingStage === 'idle' && 'Iniciando procesamiento IA...'}
                 </span>
@@ -768,8 +1014,12 @@ export default function LiveCaptureWizard({
                   className={`h-full bg-emerald-500 transition-all duration-700 ${
                     processingStage === 'adjusting_garment'
                       ? 'w-1/3'
+                      : processingStage === 'adjusting_garment_top'
+                      ? 'w-1/4'
+                      : processingStage === 'adjusting_garment_bottom'
+                      ? 'w-2/4'
                       : processingStage === 'generating_copy'
-                      ? 'w-2/3'
+                      ? 'w-3/4'
                       : processingStage === 'replacing_background'
                       ? 'w-11/12'
                       : 'w-full'
@@ -789,7 +1039,7 @@ export default function LiveCaptureWizard({
               }`}
             >
               <Sparkles className={`w-5 h-5 ${canSubmit ? 'text-emerald-400' : 'text-stone-400'}`} />
-              <span>Vestir Modelo + Crear Ficha IA</span>
+              <span>{isOutfit ? 'Vestir Conjunto 2 Piezas + Ficha IA' : 'Vestir Modelo + Crear Ficha IA'}</span>
             </button>
           )}
 
@@ -800,7 +1050,13 @@ export default function LiveCaptureWizard({
                 ? 'Toma la foto de la modelo (Paso 1) y de la prenda (Paso 2)'
                 : !modelImage
                 ? 'Falta la foto de la modelo (Paso 1)'
-                : 'Falta la foto de la prenda colgada en percha (Paso 2)'}
+                : !garmentImage
+                ? isOutfit
+                  ? 'Falta la foto de la parte superior (Paso 2)'
+                  : 'Falta la foto de la prenda en percha (Paso 2)'
+                : isOutfit && !secondaryGarmentImage
+                ? 'Falta la foto de la parte inferior del conjunto'
+                : 'Completa las fotos requeridas'}
             </p>
           )}
         </div>

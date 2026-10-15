@@ -1,5 +1,6 @@
 export type ProductCategory = 'tops' | 'bottoms' | 'one-pieces' | 'auto';
 export type BackgroundType = 'original' | 'beach' | 'studio' | 'urban' | 'garden' | 'custom';
+export type GarmentCaptureMode = 'single' | 'outfit';
 
 export interface CatalogProduct {
   id: string;
@@ -15,9 +16,11 @@ export interface CatalogProduct {
   skuPrefix: string;
   modelPhotoBase64: string;
   garmentPhotoBase64: string;
+  secondaryGarmentPhotoBase64?: string;
   resultImageUrl: string;
   instagramCaption: string;
   backgroundType?: BackgroundType;
+  isOutfit?: boolean;
 }
 
 export interface DemoSettings {

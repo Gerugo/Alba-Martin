@@ -191,6 +191,21 @@ export default function ResultShowcase({
               </span>
             </div>
           </div>
+        ) : activeView === 'before' && product.isOutfit && product.secondaryGarmentPhotoBase64 ? (
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4]">
+              <img src={product.garmentPhotoBase64} alt="Parte superior" className="w-full h-full object-cover" />
+              <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                1. Superior
+              </span>
+            </div>
+            <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4]">
+              <img src={product.secondaryGarmentPhotoBase64} alt="Parte inferior" className="w-full h-full object-cover" />
+              <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                2. Inferior
+              </span>
+            </div>
+          </div>
         ) : (
           <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] max-h-96 flex items-center justify-center mb-3 group">
             <img
@@ -373,9 +388,16 @@ export default function ResultShowcase({
       <section className="bg-white rounded-3xl p-5 shadow-sm border border-stone-200/80 space-y-4">
         <div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase font-bold text-stone-400">
-              Título Comercial & SEO
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase font-bold text-stone-400">
+                Título Comercial & SEO
+              </span>
+              {product.isOutfit && (
+                <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-stone-900 text-white">
+                  Conjunto 2 Piezas
+                </span>
+              )}
+            </div>
             <span className="text-sm font-bold text-stone-900 font-mono">
               {product.price.toFixed(2)} €
             </span>

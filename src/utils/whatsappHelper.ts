@@ -85,6 +85,7 @@ export function buildWhatsAppMessage(
   const article = getGarmentArticle(title);
   const formattedPrice = price.toFixed(2);
   const safeSize = size.trim() || 'M';
+  const pronoun = article === 'la nueva' ? '¿La tenéis disponible?' : '¿Lo tenéis disponible?';
 
-  return `¡Hola ${safeStore}! Acabo de ver en vuestro catálogo ${article} *${title}* (${formattedPrice}€) y me gustaría reservar la talla *${safeSize}*. ¿La tenéis disponible?`;
+  return `¡Hola ${safeStore}! Acabo de ver en vuestro catálogo ${article} *${title}* (${formattedPrice}€) y me gustaría reservar la talla *${safeSize}*. ${pronoun}`;
 }

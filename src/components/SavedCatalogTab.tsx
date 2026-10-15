@@ -221,6 +221,11 @@ export default function SavedCatalogTab({
 
                     {/* Sizes and Category chips */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      {item.isOutfit && (
+                        <span className="text-[10px] bg-stone-900 text-white px-2 py-0.5 rounded font-bold">
+                          Conjunto 2 Piezas
+                        </span>
+                      )}
                       <span className="text-[10px] bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium flex items-center gap-1">
                         <Layers className="w-3 h-3 text-stone-400" />
                         {item.productCategory}

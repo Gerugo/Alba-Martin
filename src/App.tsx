@@ -17,7 +17,7 @@ import {
   deleteProductFromCatalog,
   clearCatalog,
 } from './services/catalogStorage';
-import { executeLiveTryOnAndCatalog } from './services/aiService';
+import { executeLiveTryOnAndCatalog, TryOnStage } from './services/aiService';
 import { CatalogProduct, DemoSettings } from './types/catalog';
 
 type NavigationTab = 'capture' | 'result' | 'catalog';
@@ -35,9 +35,7 @@ export default function App() {
 
   // Processing state
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [processingStage, setProcessingStage] = useState<
-    'idle' | 'adjusting_garment' | 'generating_copy' | 'replacing_background' | 'completed'
-  >('idle');
+  const [processingStage, setProcessingStage] = useState<TryOnStage>('idle');
   const [executionError, setExecutionError] = useState<string | null>(null);
 
   // Load catalog on mount
@@ -56,13 +54,16 @@ export default function App() {
   const handleStartProcess = async (payload: ProcessPayload) => {
     setExecutionError(null);
     setIsProcessing(true);
-    setProcessingStage('adjusting_garment');
+    setProcessingStage(payload.isOutfit ? 'adjusting_garment_top' : 'adjusting_garment');
 
     try {
       const product = await executeLiveTryOnAndCatalog({
         modelDataUri: payload.modelImage.dataUri,
         garmentDataUri: payload.garmentImage.dataUri,
         garmentBase64Raw: payload.garmentImage.base64Raw,
+        secondaryGarmentDataUri: payload.secondaryGarmentImage?.dataUri,
+        secondaryGarmentBase64Raw: payload.secondaryGarmentImage?.base64Raw,
+        isOutfit: payload.isOutfit,
         category: payload.category,
         backgroundType: payload.backgroundType,
         customBackgroundBase64: payload.customBackgroundImage?.dataUri,

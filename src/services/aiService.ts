@@ -1,10 +1,22 @@
 import { fal } from '@fal-ai/client';
 import { CatalogProduct, ProductCategory, BackgroundType } from '../types/catalog';
 
+export type TryOnStage =
+  | 'idle'
+  | 'adjusting_garment'
+  | 'adjusting_garment_top'
+  | 'adjusting_garment_bottom'
+  | 'generating_copy'
+  | 'replacing_background'
+  | 'completed';
+
 export interface TryOnParams {
   modelDataUri: string;
   garmentDataUri: string;
   garmentBase64Raw: string;
+  secondaryGarmentDataUri?: string;
+  secondaryGarmentBase64Raw?: string;
+  isOutfit?: boolean;
   category: ProductCategory;
   backgroundType?: BackgroundType;
   customBackgroundBase64?: string;
@@ -15,7 +27,7 @@ export interface TryOnParams {
   geminiKey: string;
   geminiModel?: string;
   simulationMode?: boolean;
-  onStageChange?: (stage: 'adjusting_garment' | 'generating_copy' | 'replacing_background') => void;
+  onStageChange?: (stage: TryOnStage) => void;
 }
 
 export interface GeneratedMetadata {
@@ -91,7 +103,9 @@ export async function generateProductMetadata(
   category: ProductCategory,
   geminiKey: string,
   simulationMode = false,
-  requestedModel = 'gemini-3.6-flash'
+  requestedModel = 'gemini-3.6-flash',
+  isOutfit = false,
+  secondaryGarmentBase64Raw?: string
 ): Promise<GeneratedMetadata> {
   const safeStoreName = storeName || 'Boutique Rota';
   const safeSizesStr = sizes.length > 0 ? sizes.join(', ') : 'S, M, L';
@@ -99,6 +113,18 @@ export async function generateProductMetadata(
 
   // Fallback simulator for offline / no coverage
   const getSimulatedMetadata = (): GeneratedMetadata => {
+    if (isOutfit) {
+      const title = 'Conjunto Dos Piezas Americana y Pantalón';
+      const handle = 'conjunto-dos-piezas-americana-pantalon';
+      return {
+        title,
+        handle,
+        descriptionHtml: `<p>Luce un <strong>Total Look coordinado</strong> de <strong>${safeStoreName}</strong>. Este conjunto de dos piezas combina prenda superior e inferior en armonía perfecta, confeccionado con tejidos ligeros y corte favorecedor para estilizar tu figura.</p><ul><li><strong>Piezas incluidas:</strong> Prenda superior fluida y prenda inferior con caída impecable.</li><li><strong>Versatilidad:</strong> Llévalas juntas para un estilo sofisticado de ocasión o combínalas por separado con prendas básicas para el día a día.</li><li><strong>Cuidado y acabado:</strong> Confección de alta calidad resistente a arrugas y de tacto suave.</li></ul>`,
+        tags: ['conjunto', 'total look', 'dos piezas', 'nueva coleccion', 'moda mujer', 'boutique'],
+        instagramCaption: `Total Look en ${safeStoreName}.\n\nDescubre este conjunto de 2 piezas diseñado para deslumbrar. Puedes lucirlo como look coordinado para tus eventos o combinar cada prenda por separado para multiplicar las opciones de tu armario.\n\nTallas disponibles: ${safeSizesStr}\nPrecio del conjunto completo: ${formattedPrice}€\n\nReserva tu talla enviándonos un mensaje directo o por WhatsApp.\n\n#TotalLook #Conjunto #${safeStoreName.replace(/\s+/g, '')} #NuevaColeccion #ModaMujer #OOTD`,
+      };
+    }
+
     const titlesByCategory: Record<ProductCategory, string> = {
       auto: 'Vestido Camisero Floral con Cinturón',
       tops: 'Blusa Fluida Satinada con Cuello Lazadas',
@@ -134,7 +160,23 @@ export async function generateProductMetadata(
     );
   }
 
-  const prompt = `Eres un redactor experto en moda y e-commerce de alta conversión para boutiques de ropa en España.
+  const prompt = isOutfit
+    ? `Eres un redactor experto en moda y e-commerce de alta conversión para boutiques de ropa en España.
+Analiza las fotos adjuntas de este CONJUNTO / TOTAL LOOK DE 2 PIEZAS (foto 1: parte superior, foto 2: parte inferior).
+Detalles comerciales de la tienda:
+- Nombre de la boutique: "${safeStoreName}"
+- Precio del conjunto completo: ${formattedPrice}€
+- Tallas disponibles para la venta: ${safeSizesStr}
+
+REGLA ESTRICTA DE ESTILO: NUNCA utilices emoticonos ni emojis de ningún tipo en ninguna parte del texto generado (ni en el título, ni en la descripción, ni en el post de Instagram).
+
+Genera un objeto JSON EXACTO con las siguientes claves:
+1. "title": Nombre comercial atractivo que indique que es un conjunto o dos piezas en español (ej. "Conjunto Dos Piezas Americana Fluida y Pantalón Recto").
+2. "handle": Slug SEO amigable sin tildes ni espacios (ej. "conjunto-dos-piezas-americana-pantalon").
+3. "descriptionHtml": Descripción comercial persuasiva en HTML utilizando párrafos (<p>) y lista de viñetas (<ul><li>) destacando el conjunto coordinado, la caída de ambas piezas y cómo combinarlas juntas o por separado.
+4. "tags": Array con 5 etiquetas en minúsculas para buscador de tienda online (ej. ["conjunto", "total look", "dos piezas", "nueva coleccion", "boutique"]).
+5. "instagramCaption": Texto profesional y elegante para Instagram y Estados de WhatsApp sin emoticonos, mencionando las tallas (${safeSizesStr}), el precio (${formattedPrice}€), la tienda "${safeStoreName}" y una llamada clara a reservar por WhatsApp o mensaje directo.`
+    : `Eres un redactor experto en moda y e-commerce de alta conversión para boutiques de ropa en España.
 Analiza la foto adjunta de esta prenda de vestir colgada en percha.
 Detalles comerciales de la tienda:
 - Nombre de la boutique: "${safeStoreName}"
@@ -164,6 +206,26 @@ Genera un objeto JSON EXACTO con las siguientes claves:
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 18000);
 
+      const parts: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
+        {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: garmentBase64Raw,
+          },
+        },
+      ];
+
+      if (isOutfit && secondaryGarmentBase64Raw) {
+        parts.push({
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: secondaryGarmentBase64Raw,
+          },
+        });
+      }
+
+      parts.push({ text: prompt });
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
         {
@@ -175,17 +237,7 @@ Genera un objeto JSON EXACTO con las siguientes claves:
           body: JSON.stringify({
             contents: [
               {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: 'image/jpeg',
-                      data: garmentBase64Raw,
-                    },
-                  },
-                  {
-                    text: prompt,
-                  },
-                ],
+                parts,
               },
             ],
             generationConfig: {
@@ -213,13 +265,13 @@ Genera un objeto JSON EXACTO con las siguientes claves:
       const parsed = JSON.parse(cleaned);
 
       return {
-        title: parsed.title || 'Prenda de Temporada',
+        title: parsed.title || (isOutfit ? 'Conjunto Dos Piezas de Temporada' : 'Prenda de Temporada'),
         handle:
           parsed.handle ||
-          'prenda-de-temporada-' + Math.floor(Math.random() * 1000),
+          (isOutfit ? 'conjunto-dos-piezas-' : 'prenda-de-temporada-') + Math.floor(Math.random() * 1000),
         descriptionHtml:
           parsed.descriptionHtml ||
-          `<p>Prenda de diseño exclusivo disponible en <strong>${safeStoreName}</strong>.</p>`,
+          `<p>Diseño exclusivo disponible en <strong>${safeStoreName}</strong>.</p>`,
         tags: Array.isArray(parsed.tags) ? parsed.tags : ['moda', 'nueva coleccion'],
         instagramCaption: parsed.instagramCaption || `Novedad en ${safeStoreName} por ${formattedPrice}€.`,
       };
@@ -304,6 +356,9 @@ export async function executeLiveTryOnAndCatalog(
     modelDataUri,
     garmentDataUri,
     garmentBase64Raw,
+    secondaryGarmentDataUri,
+    secondaryGarmentBase64Raw,
+    isOutfit,
     category,
     price,
     sizes,
@@ -314,25 +369,54 @@ export async function executeLiveTryOnAndCatalog(
     onStageChange,
   } = params;
 
-  onStageChange?.('adjusting_garment');
-
-  // Trigger both try-on and copywriting concurrently
-  const [initialImageUrl, metadata] = await Promise.all([
-    runVirtualTryOn(modelDataUri, garmentDataUri, category, falKey, simulationMode),
-    (async () => {
-      onStageChange?.('generating_copy');
-      return generateProductMetadata(
-        garmentBase64Raw,
-        price,
-        sizes,
-        storeName,
-        category,
-        geminiKey,
-        simulationMode,
-        params.geminiModel
+  // Try-on execution (cascade if outfit)
+  const tryOnPromise = (async () => {
+    if (isOutfit && secondaryGarmentDataUri) {
+      // Paso 1: Viste la prenda superior
+      onStageChange?.('adjusting_garment_top');
+      const topResultUrl = await runVirtualTryOn(
+        modelDataUri,
+        garmentDataUri,
+        'tops',
+        falKey,
+        simulationMode
       );
-    })(),
-  ]);
+
+      // Paso 2: Viste la prenda inferior sobre el resultado de la parte de arriba
+      onStageChange?.('adjusting_garment_bottom');
+      const fullOutfitUrl = await runVirtualTryOn(
+        topResultUrl,
+        secondaryGarmentDataUri,
+        'bottoms',
+        falKey,
+        simulationMode
+      );
+
+      return fullOutfitUrl;
+    } else {
+      onStageChange?.('adjusting_garment');
+      return runVirtualTryOn(modelDataUri, garmentDataUri, category, falKey, simulationMode);
+    }
+  })();
+
+  // Redacción publicitaria en paralelo
+  const metadataPromise = (async () => {
+    onStageChange?.('generating_copy');
+    return generateProductMetadata(
+      garmentBase64Raw,
+      price,
+      sizes,
+      storeName,
+      category,
+      geminiKey,
+      simulationMode,
+      params.geminiModel,
+      isOutfit,
+      secondaryGarmentBase64Raw
+    );
+  })();
+
+  const [initialImageUrl, metadata] = await Promise.all([tryOnPromise, metadataPromise]);
 
   // Optional background replacement stage
   let resultImageUrl = initialImageUrl;
@@ -359,14 +443,16 @@ export async function executeLiveTryOnAndCatalog(
     handle: metadata.handle,
     descriptionHtml: metadata.descriptionHtml,
     vendor: storeName || 'Boutique Rota',
-    productCategory: category,
+    productCategory: isOutfit ? 'one-pieces' : category,
     backgroundType: params.backgroundType || 'original',
+    isOutfit: Boolean(isOutfit),
     tags: metadata.tags,
     price,
     sizes,
     skuPrefix: prefix,
     modelPhotoBase64: modelDataUri,
     garmentPhotoBase64: garmentDataUri,
+    secondaryGarmentPhotoBase64: secondaryGarmentDataUri,
     resultImageUrl,
     instagramCaption: metadata.instagramCaption,
   };
