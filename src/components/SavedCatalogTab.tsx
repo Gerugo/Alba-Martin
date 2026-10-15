@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
 import { exportShopifyCSV, exportPrestaShopCSV } from '../utils/csvExporter';
+import { buildWhatsAppMessage } from '../utils/whatsappHelper';
 
 interface SavedCatalogTabProps {
   products: CatalogProduct[];
@@ -170,7 +171,7 @@ export default function SavedCatalogTab({
         <div className="space-y-4">
           {products.map((item) => {
             const firstSize = item.sizes[0] || 'M';
-            const whatsappText = `¡Hola ${storeName}! Acabo de ver en el catálogo el nuevo ${item.title} (${item.price.toFixed(2)}€) y quería reservar la talla ${firstSize}.`;
+            const whatsappText = buildWhatsAppMessage(storeName, item.title, item.price, firstSize);
             const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`;
 
             return (

@@ -10,9 +10,11 @@ import {
   Tag,
   Barcode,
   Layers,
-  ArrowLeft
+  ArrowLeft,
+  RotateCcw
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
+import { buildWhatsAppMessage } from '../utils/whatsappHelper';
 
 interface ResultShowcaseProps {
   product: CatalogProduct;
@@ -35,6 +37,10 @@ export default function ResultShowcase({
   const [selectedSizeForWhatsapp, setSelectedSizeForWhatsapp] = useState<string>(
     product.sizes[0] || 'M'
   );
+  const [whatsappMessage, setWhatsappMessage] = useState<string>(() =>
+    buildWhatsAppMessage(storeName, product.title, product.price, product.sizes[0] || 'M')
+  );
+  const [isEditingWhatsapp, setIsEditingWhatsapp] = useState<boolean>(false);
 
   // Copy Instagram caption to clipboard
   const handleCopyCaption = async () => {
@@ -72,8 +78,19 @@ export default function ResultShowcase({
 
   // WhatsApp Reservation message
   const cleanPhone = storePhone.replace(/[^0-9]/g, '') || '34600000000';
-  const whatsappMessage = `¡Hola ${storeName}! Acabo de ver en el catálogo el nuevo ${product.title} (${product.price.toFixed(2)}€) y quería reservar la talla ${selectedSizeForWhatsapp}.`;
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+
+  const handleSelectSize = (sz: string) => {
+    setSelectedSizeForWhatsapp(sz);
+    setWhatsappMessage(buildWhatsAppMessage(storeName, product.title, product.price, sz));
+  };
+
+  const handleResetWhatsapp = () => {
+    setWhatsappMessage(
+      buildWhatsAppMessage(storeName, product.title, product.price, selectedSizeForWhatsapp)
+    );
+    setIsEditingWhatsapp(false);
+  };
 
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-300">
@@ -204,25 +221,64 @@ export default function ResultShowcase({
         </div>
 
         {/* Choose size for reservation test */}
-        <div className="flex items-center gap-2 pt-1">
-          <span className="text-xs font-semibold text-stone-600">Elegir talla a probar:</span>
-          <div className="flex gap-1">
-            {product.sizes.map((sz) => (
-              <button
-                key={sz}
-                type="button"
-                onClick={() => setSelectedSizeForWhatsapp(sz)}
-                className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
-                  selectedSizeForWhatsapp === sz
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
-                }`}
-              >
-                {sz}
-              </button>
-            ))}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-stone-600">Talla a reservar:</span>
+            <div className="flex gap-1">
+              {product.sizes.map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => handleSelectSize(sz)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    selectedSizeForWhatsapp === sz
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                  }`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsEditingWhatsapp(!isEditingWhatsapp)}
+            className="text-[11px] font-semibold text-emerald-800 hover:text-emerald-950 underline"
+          >
+            {isEditingWhatsapp ? 'Cerrar edición' : 'Editar texto'}
+          </button>
         </div>
+
+        {/* WhatsApp message preview or editor */}
+        {isEditingWhatsapp ? (
+          <div className="space-y-1.5">
+            <textarea
+              value={whatsappMessage}
+              onChange={(e) => setWhatsappMessage(e.target.value)}
+              rows={3}
+              className="w-full text-xs font-sans p-3 rounded-xl border border-emerald-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all leading-relaxed bg-white"
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleResetWhatsapp}
+                className="text-[10px] text-stone-500 hover:text-stone-800 flex items-center gap-1 font-medium"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Restablecer texto original
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 bg-white/90 border border-emerald-200/70 rounded-2xl text-xs text-stone-800 leading-relaxed shadow-xs flex items-start gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-sans text-[11px] text-stone-700">{whatsappMessage}</p>
+            </div>
+          </div>
+        )}
 
         {/* WhatsApp Big Action Button */}
         <a
@@ -234,10 +290,6 @@ export default function ResultShowcase({
           <MessageCircle className="w-5 h-5 fill-white stroke-none" />
           Probar Reserva real por WhatsApp
         </a>
-
-        <p className="text-[11px] text-stone-500 text-center font-mono">
-          Enviará: &quot;¡Hola {storeName}! Acabo de ver en el catálogo el nuevo {product.title}...&quot;
-        </p>
       </section>
 
       {/* ======================================================== */}
