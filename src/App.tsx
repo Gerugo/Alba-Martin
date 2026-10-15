@@ -69,6 +69,7 @@ export default function App() {
         storeName: settings.storeName || 'Boutique Rota',
         falKey: settings.falKey,
         geminiKey: settings.geminiKey,
+        geminiModel: settings.geminiModel,
         simulationMode: settings.simulationMode,
         onStageChange: (stage) => setProcessingStage(stage),
       });

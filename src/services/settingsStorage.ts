@@ -10,6 +10,7 @@ export function getDefaultSettings(): DemoSettings {
     storeName: 'Boutique Rota',
     storePhone: '34600000000',
     simulationMode: false,
+    geminiModel: 'gemini-3.6-flash',
   };
 }
 
@@ -24,6 +25,7 @@ export function loadSettings(): DemoSettings {
       storeName: parsed.storeName || 'Boutique Rota',
       storePhone: parsed.storePhone || '34600000000',
       simulationMode: Boolean(parsed.simulationMode),
+      geminiModel: parsed.geminiModel || 'gemini-3.6-flash',
     };
   } catch (e) {
     console.error('Error loading settings from localStorage', e);

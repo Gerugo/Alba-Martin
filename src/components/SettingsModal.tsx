@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Key, Store, Phone, Zap, ShieldCheck, AlertCircle } from 'lucide-react';
+import { X, Key, Store, Phone, Zap, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
 import { DemoSettings } from '../types/catalog';
 
 interface SettingsModalProps {
@@ -100,6 +100,31 @@ export default function SettingsModal({
               placeholder="AIzaSy..."
               className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
             />
+          </div>
+
+          {/* Selector de Modelo Gemini */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-stone-700 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-stone-500" />
+                Modelo Gemini IA
+              </span>
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
+                3.6 recomendado
+              </span>
+            </label>
+            <select
+              value={formData.geminiModel || 'gemini-3.6-flash'}
+              onChange={(e) => setFormData({ ...formData, geminiModel: e.target.value })}
+              className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all bg-white font-medium text-stone-800"
+            >
+              <option value="gemini-3.6-flash">Gemini 3.6 Flash (⚡ Ultrarrápido, 1.7s, muy estable)</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mayor capacidad)</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Económico / Ligero)</option>
+            </select>
+            <p className="text-[11px] text-stone-500">
+              Para generar títulos y posts de Instagram, 3.6 Flash es el más rápido y fiable.
+            </p>
           </div>
 
           {/* Nombre de la Tienda */}

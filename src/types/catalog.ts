@@ -24,6 +24,7 @@ export interface DemoSettings {
   storeName: string;
   storePhone: string;
   simulationMode: boolean;
+  geminiModel?: string;
 }
 
 export interface CompressedImageResult {

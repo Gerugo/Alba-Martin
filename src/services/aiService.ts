@@ -11,6 +11,7 @@ export interface TryOnParams {
   storeName: string;
   falKey: string;
   geminiKey: string;
+  geminiModel?: string;
   simulationMode?: boolean;
   onStageChange?: (stage: 'adjusting_garment' | 'generating_copy') => void;
 }
@@ -87,7 +88,8 @@ export async function generateProductMetadata(
   storeName: string,
   category: ProductCategory,
   geminiKey: string,
-  simulationMode = false
+  simulationMode = false,
+  requestedModel = 'gemini-3.6-flash'
 ): Promise<GeneratedMetadata> {
   const safeStoreName = storeName || 'Boutique Rota';
   const safeSizesStr = sizes.length > 0 ? sizes.join(', ') : 'S, M, L';
@@ -130,8 +132,7 @@ export async function generateProductMetadata(
     );
   }
 
-  try {
-    const prompt = `Eres un redactor experto en moda y e-commerce de alta conversión para boutiques de ropa en España.
+  const prompt = `Eres un redactor experto en moda y e-commerce de alta conversión para boutiques de ropa en España.
 Analiza la foto adjunta de esta prenda de vestir colgada en percha.
 Detalles comerciales de la tienda:
 - Nombre de la boutique: "${safeStoreName}"
@@ -146,77 +147,86 @@ Genera un objeto JSON EXACTO con las siguientes claves:
 4. "tags": Array con 5 etiquetas en minúsculas para buscador de tienda online (ej. ["blusa", "nueva coleccion", "moda mujer", "fiesta", "elegante"]).
 5. "instagramCaption": Texto apasionante para Instagram y Estados de WhatsApp con emojis, mencionando las tallas (${safeSizesStr}), el precio (${formattedPrice}€), la tienda "${safeStoreName}" y una llamada clara a reservar por WhatsApp o mensaje directo.`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+  // Model cascade: try preferred model (e.g. gemini-3.6-flash), then fast alternatives
+  const candidateModels = [
+    requestedModel || 'gemini-3.6-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+  ].filter((m, i, arr) => arr.indexOf(m) === i);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey.trim()}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: garmentBase64Raw,
-                  },
-                },
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.3,
+  for (const model of candidateModels) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        }),
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: 'image/jpeg',
+                      data: garmentBase64Raw,
+                    },
+                  },
+                  {
+                    text: prompt,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.3,
+            },
+          }),
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(`Modelo ${model} respondió con error ${response.status}. Probando siguiente...`);
+        continue;
       }
-    );
-    clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.warn('Fallo en llamada a Gemini API:', response.status, errBody);
-      // If error (e.g. rate limit, temporary issue), fallback to smart generated metadata
-      return getSimulatedMetadata();
+      const jsonResp = await response.json();
+      const candidateText = jsonResp.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!candidateText) {
+        continue;
+      }
+
+      const cleaned = candidateText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+      const parsed = JSON.parse(cleaned);
+
+      return {
+        title: parsed.title || 'Prenda de Temporada',
+        handle:
+          parsed.handle ||
+          'prenda-de-temporada-' + Math.floor(Math.random() * 1000),
+        descriptionHtml:
+          parsed.descriptionHtml ||
+          `<p>Prenda de diseño exclusivo disponible en <strong>${safeStoreName}</strong>.</p>`,
+        tags: Array.isArray(parsed.tags) ? parsed.tags : ['moda', 'nueva coleccion'],
+        instagramCaption: parsed.instagramCaption || `Novedad en ${safeStoreName} por ${formattedPrice}€.`,
+      };
+    } catch (modelErr) {
+      console.warn(`Error al consultar ${model}:`, modelErr);
     }
-
-    const jsonResp = await response.json();
-    const candidateText = jsonResp.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!candidateText) {
-      console.warn('Gemini API no devolvió contenido de texto. Usando metadata base.');
-      return getSimulatedMetadata();
-    }
-
-    // Clean potential markdown blocks
-    const cleaned = candidateText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(cleaned);
-
-    return {
-      title: parsed.title || 'Prenda de Temporada',
-      handle:
-        parsed.handle ||
-        'prenda-de-temporada-' + Math.floor(Math.random() * 1000),
-      descriptionHtml:
-        parsed.descriptionHtml ||
-        `<p>Prenda de diseño exclusivo disponible en <strong>${safeStoreName}</strong>.</p>`,
-      tags: Array.isArray(parsed.tags) ? parsed.tags : ['moda', 'nueva coleccion'],
-      instagramCaption: parsed.instagramCaption || `Novedad en ${safeStoreName} por ${formattedPrice}€.`,
-    };
-  } catch (err: unknown) {
-    console.error('Error en generateProductMetadata:', err);
-    // In live store demonstration, fallback gracefully so demo never gets blocked
-    return getSimulatedMetadata();
   }
+
+  // Graceful fallback if all models fail
+  console.warn('Ningún modelo de Gemini respondió a tiempo. Activando ficha de alta calidad de reserva.');
+  return getSimulatedMetadata();
 }
 
 /**
@@ -253,7 +263,8 @@ export async function executeLiveTryOnAndCatalog(
         storeName,
         category,
         geminiKey,
-        simulationMode
+        simulationMode,
+        params.geminiModel
       );
     })(),
   ]);
