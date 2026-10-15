@@ -34,11 +34,11 @@ interface LiveCaptureWizardProps {
 
 const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'Única'];
 
-const CATEGORY_OPTIONS: { id: ProductCategory; label: string; icon: string }[] = [
-  { id: 'auto', label: 'Automático', icon: '✨' },
-  { id: 'tops', label: 'Arriba / Chaqueta', icon: '👚' },
-  { id: 'bottoms', label: 'Pantalón / Falda', icon: '👖' },
-  { id: 'one-pieces', label: 'Vestido / Entero', icon: '👗' },
+const CATEGORY_OPTIONS: { id: ProductCategory; label: string }[] = [
+  { id: 'auto', label: 'Detección automática' },
+  { id: 'tops', label: 'Parte superior / Chaqueta' },
+  { id: 'bottoms', label: 'Pantalón / Falda' },
+  { id: 'one-pieces', label: 'Vestido / Cuerpo entero' },
 ];
 
 export default function LiveCaptureWizard({
@@ -507,14 +507,14 @@ export default function LiveCaptureWizard({
                   key={opt.id}
                   type="button"
                   onClick={() => setCategory(opt.id)}
-                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border text-left ${
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border text-left ${
                     active
                       ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
                       : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
                   }`}
                 >
-                  <span className="text-sm">{opt.icon}</span>
                   <span className="truncate">{opt.label}</span>
+                  {active && <Check className="w-3.5 h-3.5 text-white flex-shrink-0" />}
                 </button>
               );
             })}

@@ -1,8 +1,8 @@
 import { CompressedImageResult } from '../types/catalog';
 
-const DEFAULT_MAX_WIDTH = 864;
-const DEFAULT_MAX_HEIGHT = 1296;
-const DEFAULT_QUALITY = 0.85;
+const DEFAULT_MAX_WIDTH = 1600;
+const DEFAULT_MAX_HEIGHT = 2400;
+const DEFAULT_QUALITY = 0.94;
 
 /**
  * Compresses an image file from mobile camera or file input.

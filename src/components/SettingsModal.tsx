@@ -118,7 +118,7 @@ export default function SettingsModal({
               onChange={(e) => setFormData({ ...formData, geminiModel: e.target.value })}
               className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all bg-white font-medium text-stone-800"
             >
-              <option value="gemini-3.6-flash">Gemini 3.6 Flash (⚡ Ultrarrápido, 1.7s, muy estable)</option>
+              <option value="gemini-3.6-flash">Gemini 3.6 Flash (Ultrarrápido, 1.7s, muy estable)</option>
               <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mayor capacidad)</option>
               <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Económico / Ligero)</option>
             </select>

@@ -11,7 +11,11 @@ import {
   Barcode,
   Layers,
   ArrowLeft,
-  RotateCcw
+  RotateCcw,
+  ZoomIn,
+  X,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
 import { buildWhatsAppMessage } from '../utils/whatsappHelper';
@@ -41,6 +45,8 @@ export default function ResultShowcase({
     buildWhatsAppMessage(storeName, product.title, product.price, product.sizes[0] || 'M')
   );
   const [isEditingWhatsapp, setIsEditingWhatsapp] = useState<boolean>(false);
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState<boolean>(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.5);
 
   // Copy Instagram caption to clipboard
   const handleCopyCaption = async () => {
@@ -94,17 +100,6 @@ export default function ResultShowcase({
 
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-300">
-      {/* Top Wow Badge */}
-      <div className="p-3 bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between text-xs">
-        <span className="font-bold text-stone-900 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-emerald-600" />
-          ¡Efecto WOW generado con éxito!
-        </span>
-        <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white">
-          Listo para vender
-        </span>
-      </div>
-
       {/* ======================================================== */}
       {/* COMPARADOR VISUAL ANTES / DESPUÉS */}
       {/* ======================================================== */}
@@ -155,40 +150,78 @@ export default function ResultShowcase({
         {/* Image Containers */}
         {activeView === 'split' ? (
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4]">
+            <div
+              onClick={() => {
+                setActiveView('before');
+                setIsZoomModalOpen(true);
+                setZoomLevel(1.5);
+              }}
+              className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] cursor-pointer group"
+            >
               <img
                 src={product.garmentPhotoBase64}
                 alt="En percha"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
                 Antes (Percha)
               </span>
+              <span className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn className="w-3.5 h-3.5" />
+              </span>
             </div>
-            <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4]">
+            <div
+              onClick={() => {
+                setActiveView('after');
+                setIsZoomModalOpen(true);
+                setZoomLevel(1.5);
+              }}
+              className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] cursor-pointer group"
+            >
               <img
                 src={product.resultImageUrl}
                 alt="Modelo vistiendo la prenda"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
                 Después (IA)
               </span>
+              <span className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn className="w-3.5 h-3.5" />
+              </span>
             </div>
           </div>
         ) : (
-          <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] max-h-96 flex items-center justify-center mb-3">
+          <div className="relative rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 aspect-[3/4] max-h-96 flex items-center justify-center mb-3 group">
             <img
               src={activeView === 'after' ? product.resultImageUrl : product.garmentPhotoBase64}
               alt="Visualización prenda"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => {
+                setIsZoomModalOpen(true);
+                setZoomLevel(1.5);
+              }}
             />
+            {/* Zoom trigger button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsZoomModalOpen(true);
+                setZoomLevel(1.5);
+              }}
+              className="absolute top-3 right-3 bg-black/70 hover:bg-black/90 text-white px-2.5 py-1.5 rounded-xl backdrop-blur-md transition-all shadow-sm flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer"
+              title="Ampliar y ver detalles de la prenda"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+              <span>Ver con zoom</span>
+            </button>
+
             <span
               className={`absolute bottom-3 left-3 text-white text-xs font-bold px-3 py-1 rounded-xl shadow-md ${
                 activeView === 'after' ? 'bg-emerald-600' : 'bg-stone-900'
               }`}
             >
-              {activeView === 'after' ? '✨ Modelo Real Vistiendo la Prenda (IA)' : 'Foto en Percha'}
+              {activeView === 'after' ? 'Modelo con la Prenda (Probador Virtual)' : 'Foto en Percha'}
             </span>
           </div>
         )}
@@ -421,6 +454,75 @@ export default function ResultShowcase({
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* ======================================================== */}
+      {/* MODAL DE INSPECCIÓN HD CON ZOOM */}
+      {/* ======================================================== */}
+      {isZoomModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col justify-between p-4 backdrop-blur-md animate-in fade-in duration-200">
+          {/* Top toolbar */}
+          <div className="flex items-center justify-between text-white pb-3 border-b border-stone-800">
+            <div>
+              <p className="text-xs font-bold text-stone-200">Detalle de la prenda en alta resolución</p>
+              <p className="text-[11px] text-stone-400">
+                {activeView === 'before'
+                  ? 'Foto en percha (alta resolución)'
+                  : 'Modelo vistiendo la prenda (alta resolución)'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((prev) => Math.max(1, prev - 0.5))}
+                className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-white"
+                title="Reducir zoom"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-mono font-bold w-12 text-center text-stone-300">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((prev) => Math.min(3.5, prev + 0.5))}
+                className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-white"
+                title="Aumentar zoom"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsZoomModalOpen(false)}
+                className="w-8 h-8 ml-2 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-white"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Zoomable Image container */}
+          <div className="flex-1 overflow-auto flex items-center justify-center my-4 select-none touch-pan-x touch-pan-y">
+            <img
+              src={activeView === 'before' ? product.garmentPhotoBase64 : product.resultImageUrl}
+              alt="Detalle de prenda en alta definición"
+              style={{
+                transform: `scale(${zoomLevel})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.2s ease-out',
+                maxHeight: '85vh',
+                maxWidth: '95vw',
+              }}
+              className="object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+
+          {/* Bottom hint */}
+          <div className="text-center text-stone-400 text-[11px] pt-2 border-t border-stone-800">
+            Usa los botones de zoom o desplaza la imagen para examinar tejidos, estampados y costuras con total nitidez.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

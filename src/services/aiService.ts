@@ -55,10 +55,10 @@ export async function runVirtualTryOn(
         model_image: modelDataUri,
         garment_image: garmentDataUri,
         category: category === 'auto' ? undefined : category,
-        mode: 'balanced',
-        garment_photo_type: 'flat-lay',
+        mode: 'quality',
+        garment_photo_type: 'auto',
         moderation_level: 'permissive',
-        output_format: 'jpeg',
+        output_format: 'png',
       } as any,
       logs: false,
     });
@@ -79,7 +79,7 @@ export async function runVirtualTryOn(
 }
 
 /**
- * Generates SEO commercial product sheet & Instagram copy using Gemini 2.5 Flash
+ * Generates SEO commercial product sheet & Instagram copy using Gemini
  */
 export async function generateProductMetadata(
   garmentBase64Raw: string,
@@ -117,7 +117,7 @@ export async function generateProductMetadata(
       handle,
       descriptionHtml: `<p>Eleva tu armario con esta pieza estrella de <strong>${safeStoreName}</strong>. Diseñada para estilizar tu figura con una caída impecable, combinando la máxima comodidad con un acabado elegante.</p><ul><li><strong>Tejido:</strong> Suave, ligero y transpirable con tacto premium.</li><li><strong>Corte:</strong> Silueta favorecedora apta para ocasiones especiales o diario.</li><li><strong>Consejo de estilo:</strong> Combínalo con calzado neutro y accesorios dorados para un look sofisticado.</li></ul>`,
       tags: ['nueva colección', 'tendencia', 'moda mujer', 'boutique', 'look elegante'],
-      instagramCaption: `✨ ¡NUEVA LLEGADA EN ${safeStoreName.toUpperCase()}! ✨\n\nNos habíais pedido prendas que sentaran de ensueño, y este modelo lo tiene todo: caída perfecta, tejido ultrasuave y una versatilidad increíble 😍💃\n\n📏 Tallas disponibles: ${safeSizesStr}\n🏷️ Precio: ${formattedPrice}€\n\n📲 ¡Unidades muy limitadas! Escríbenos por privado o por WhatsApp para reservar tu talla antes de que vuelen 👇👇\n\n#Moda #${safeStoreName.replace(/\s+/g, '')} #NuevaColeccion #Tendencias #OOTD #TiendaDeRopa`,
+      instagramCaption: `Novedad en ${safeStoreName}.\n\nPresentamos este nuevo modelo diseñado para estilizar tu figura con una caída impecable, tejido suave y gran versatilidad para tu armario.\n\nTallas disponibles: ${safeSizesStr}\nPrecio: ${formattedPrice}€\n\nPuedes escribirnos por privado o por WhatsApp para consultar disponibilidad o reservar tu talla.\n\n#Moda #${safeStoreName.replace(/\s+/g, '')} #NuevaColeccion #Tendencias #OOTD #TiendaDeRopa`,
     };
   };
 
@@ -140,12 +140,14 @@ Detalles comerciales de la tienda:
 - Tallas disponibles para la venta: ${safeSizesStr}
 - Categoría elegida: ${category}
 
+REGLA ESTRICTA DE ESTILO: NUNCA utilices emoticonos ni emojis de ningún tipo en ninguna parte del texto generado (ni en el título, ni en la descripción, ni en el post de Instagram).
+
 Genera un objeto JSON EXACTO con las siguientes claves:
 1. "title": Nombre comercial atractivo, elegante y descriptivo en español (ej. "Blusa Fluida Satinada con Cuello Lazadas").
 2. "handle": Slug SEO amigable sin tildes ni espacios (ej. "blusa-fluida-satinada-cuello-lazadas").
 3. "descriptionHtml": Descripción comercial persuasiva en HTML utilizando párrafos (<p>) y lista de viñetas (<ul><li>) destacando el corte, calidad de tela y consejos de combinación.
 4. "tags": Array con 5 etiquetas en minúsculas para buscador de tienda online (ej. ["blusa", "nueva coleccion", "moda mujer", "fiesta", "elegante"]).
-5. "instagramCaption": Texto apasionante para Instagram y Estados de WhatsApp con emojis, mencionando las tallas (${safeSizesStr}), el precio (${formattedPrice}€), la tienda "${safeStoreName}" y una llamada clara a reservar por WhatsApp o mensaje directo.`;
+5. "instagramCaption": Texto profesional y elegante para Instagram y Estados de WhatsApp sin emoticonos, mencionando las tallas (${safeSizesStr}), el precio (${formattedPrice}€), la tienda "${safeStoreName}" y una llamada clara a reservar por WhatsApp o mensaje directo.`;
 
   // Model cascade: try preferred model (e.g. gemini-3.6-flash), then fast alternatives
   const candidateModels = [
