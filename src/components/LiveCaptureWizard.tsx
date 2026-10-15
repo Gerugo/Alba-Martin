@@ -13,7 +13,8 @@ import {
   BookmarkCheck,
   Trash2,
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
 import { ProductCategory, BackgroundType, CompressedImageResult } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
@@ -279,9 +280,10 @@ export default function LiveCaptureWizard({
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-500 font-bold px-2 py-0.5 hover:bg-red-100 rounded"
+            className="text-red-500 font-bold p-1 hover:bg-red-100/80 rounded-lg"
+            aria-label="Cerrar error"
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -336,18 +338,18 @@ export default function LiveCaptureWizard({
       {/* ======================================================== */}
       {/* PASO 1: FOTO DE LA MODELO (DUEÑA / DEPENDIENTA) */}
       {/* ======================================================== */}
-      <section className="bg-white rounded-3xl p-5 shadow-sm border border-stone-200/80 transition-all">
-        <div className="flex items-start justify-between mb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-bold text-xs tracking-wider">
-              1
+      <section className="glass-card rounded-[28px] p-6 shadow-[0_10px_35px_-8px_rgba(30,25,20,0.04)] border border-[#E8DFC8]/80 transition-all">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#1A1816] text-[#EBDDC9] flex items-center justify-center font-serif-couture font-bold text-sm tracking-widest border border-stone-800 shadow-xs">
+              I
             </div>
             <div>
-              <h2 className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
+              <h2 className="font-bold text-stone-900 text-base font-serif-couture tracking-wide flex items-center gap-2">
                 <User className="w-4 h-4 text-stone-700" />
                 Foto de la Modelo (Dueña / Dependienta)
               </h2>
-              <p className="text-[11px] text-stone-500">
+              <p className="text-[11px] text-stone-500 font-sans">
                 La persona real que vestirá la prenda
               </p>
             </div>
@@ -498,40 +500,40 @@ export default function LiveCaptureWizard({
       {/* ======================================================== */}
       {/* PASO 2: FOTO DE LA PRENDA EN PERCHA + DATOS BÁSICOS */}
       {/* ======================================================== */}
-      <section className="bg-white rounded-3xl p-5 shadow-sm border border-stone-200/80 transition-all">
-        <div className="flex items-start justify-between mb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-bold text-xs tracking-wider">
-              2
+      <section className="glass-card rounded-[28px] p-6 shadow-[0_10px_35px_-8px_rgba(30,25,20,0.04)] border border-[#E8DFC8]/80 transition-all">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#1A1816] text-[#EBDDC9] flex items-center justify-center font-serif-couture font-bold text-sm tracking-widest border border-stone-800 shadow-xs">
+              II
             </div>
             <div>
-              <h2 className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
+              <h2 className="font-bold text-stone-900 text-base font-serif-couture tracking-wide flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-stone-700" />
-                {isOutfit ? 'Fotos del Conjunto (Total Look) + Datos' : 'Foto de la Prenda en Percha + Datos'}
+                {isOutfit ? 'Prendas del Conjunto (Total Look) + Datos' : 'Foto de la Prenda en Percha + Datos'}
               </h2>
-              <p className="text-[11px] text-stone-500">
-                {isOutfit ? 'Captura la parte superior y la inferior para probar el look' : 'Captura la prenda colgada y fija precio/tallas'}
+              <p className="text-[11px] text-stone-500 font-sans">
+                {isOutfit ? 'Captura la parte superior y la inferior para probar el look coordinado' : 'Captura la prenda colgada y fija precio/tallas'}
               </p>
             </div>
           </div>
           {(isOutfit ? (garmentImage && secondaryGarmentImage) : garmentImage) && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/50">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50/90 px-3 py-1 rounded-full border border-emerald-200">
               <Check className="w-3 h-3 stroke-[3]" /> {isOutfit ? 'Conjunto listo' : 'Lista'}
             </span>
           )}
         </div>
 
         {/* Selector de Modalidad: Prenda individual vs Conjunto 2 piezas */}
-        <div className="bg-stone-100 p-1 rounded-2xl flex items-center mb-4">
+        <div className="bg-[#F0EAE1]/80 p-1 rounded-2xl flex items-center mb-5 border border-[#E5DAC8]/70">
           <button
             type="button"
             onClick={() => {
               setIsOutfit(false);
               setCategory('auto');
             }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all text-center ${
               !isOutfit
-                ? 'bg-white text-stone-900 shadow-sm'
+                ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
                 : 'text-stone-600 hover:text-stone-900'
             }`}
           >
@@ -543,9 +545,9 @@ export default function LiveCaptureWizard({
               setIsOutfit(true);
               if (price === 29.95) setPrice(59.95);
             }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all text-center ${
               isOutfit
-                ? 'bg-stone-900 text-white shadow-sm'
+                ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
                 : 'text-stone-600 hover:text-stone-900'
             }`}
           >
@@ -991,14 +993,14 @@ export default function LiveCaptureWizard({
       {/* ======================================================== */}
       {/* PASO 3: BOTÓN DE ACCIÓN PRINCIPAL (STICKY / FIXED MOBILE) */}
       {/* ======================================================== */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-stone-200/80 z-20 shadow-2xl">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-[#E8DFC8]/80 z-20 shadow-[0_-8px_30px_-5px_rgba(30,20,10,0.06)]">
         <div className="max-w-lg mx-auto">
           {/* Processing stage indicators */}
           {isProcessing ? (
-            <div className="bg-stone-900 text-white rounded-2xl p-4 space-y-2 shadow-lg animate-pulse">
+            <div className="bg-[#1A1816] text-[#F5EFE6] rounded-2xl p-4 space-y-2.5 shadow-xl border border-stone-800">
               <div className="flex items-center justify-between text-xs font-medium">
                 <span className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#D4AF37]" />
                   {processingStage === 'adjusting_garment' && '1/3 Ajustando prenda al cuerpo de la modelo...'}
                   {processingStage === 'adjusting_garment_top' && '1/4 Ajustando parte superior a la modelo...'}
                   {processingStage === 'adjusting_garment_bottom' && '2/4 Ajustando parte inferior (Total Look)...'}
@@ -1007,11 +1009,11 @@ export default function LiveCaptureWizard({
                   {processingStage === 'completed' && 'Completado con éxito'}
                   {processingStage === 'idle' && 'Iniciando procesamiento IA...'}
                 </span>
-                <span className="text-[10px] text-stone-400 font-mono">IA en vivo</span>
+                <span className="text-[10px] text-amber-200/80 font-mono tracking-wider uppercase">IA en vivo</span>
               </div>
-              <div className="w-full bg-stone-800 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-stone-800/80 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className={`h-full bg-emerald-500 transition-all duration-700 ${
+                  className={`h-full bg-gradient-to-r from-[#B89758] to-[#D4AF37] transition-all duration-700 ${
                     processingStage === 'adjusting_garment'
                       ? 'w-1/3'
                       : processingStage === 'adjusting_garment_top'
@@ -1032,14 +1034,16 @@ export default function LiveCaptureWizard({
               type="button"
               onClick={handleAction}
               disabled={!canSubmit}
-              className={`w-full py-4 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-3 shadow-lg transition-all ${
+              className={`w-full py-4 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-3 transition-all ${
                 canSubmit
-                  ? 'bg-stone-900 text-white hover:bg-black active:scale-[0.99] cursor-pointer'
+                  ? 'bg-gradient-to-r from-[#1A1816] via-[#24211E] to-[#1A1816] hover:from-black hover:to-stone-950 text-[#F5EFE6] shadow-[0_8px_25px_-4px_rgba(26,24,22,0.35)] ring-1 ring-[#D4AF37]/25 active:scale-[0.99] cursor-pointer'
                   : 'bg-stone-200 text-stone-400 cursor-not-allowed'
               }`}
             >
-              <Sparkles className={`w-5 h-5 ${canSubmit ? 'text-emerald-400' : 'text-stone-400'}`} />
-              <span>{isOutfit ? 'Vestir Conjunto 2 Piezas + Ficha IA' : 'Vestir Modelo + Crear Ficha IA'}</span>
+              <Sparkles className={`w-5 h-5 ${canSubmit ? 'text-[#D4AF37]' : 'text-stone-400'}`} />
+              <span className="font-serif-couture tracking-wider text-base font-semibold">
+                {isOutfit ? 'Vestir Conjunto 2 Piezas + Ficha IA' : 'Vestir Modelo + Crear Ficha IA'}
+              </span>
             </button>
           )}
 

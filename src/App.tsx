@@ -4,7 +4,8 @@ import {
   Sparkles,
   ShoppingBag,
   Camera,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import LiveCaptureWizard, { ProcessPayload } from './components/LiveCaptureWizard';
 import ResultShowcase from './components/ResultShowcase';
@@ -119,36 +120,36 @@ export default function App() {
   const isReady = (hasFalKey && hasGeminiKey) || settings.simulationMode;
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-stone-900 flex flex-col selection:bg-stone-900 selection:text-white">
+    <div className="min-h-screen luxury-bg text-stone-900 flex flex-col selection:bg-[#1A1816] selection:text-[#F5EFE6]">
       {/* ======================================================== */}
-      {/* TOP NAVBAR MOBILE-FIRST */}
+      {/* TOP NAVBAR HAUTE COUTURE MOBILE-FIRST */}
       {/* ======================================================== */}
-      <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30 px-4 py-2.5 shadow-xs">
+      <header className="border-b border-[#EBDDC9]/60 glass-luxury sticky top-0 z-30 px-4 py-3 shadow-[0_4px_25px_-5px_rgba(30,20,10,0.03)]">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div
             onClick={() => setActiveTab('capture')}
-            className="flex items-center gap-2.5 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-2xl bg-stone-900 text-white flex items-center justify-center shadow-sm">
-              <Sparkles className="w-4 h-4 text-amber-300" />
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 text-[#EBDDC9] flex items-center justify-center shadow-sm border border-stone-800 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-bold font-serif-fashion tracking-tight text-stone-900">
-                  {settings.storeName || 'Demo Moda IA'}
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm font-semibold font-serif-couture tracking-[0.16em] uppercase text-stone-900">
+                  {settings.storeName || 'Alba Martín'}
                 </h1>
                 {settings.simulationMode ? (
-                  <span className="text-[9px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                    SIM
+                  <span className="text-[9px] uppercase font-mono font-semibold tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                    Modo Demo
                   </span>
                 ) : (
-                  <span className="text-[9px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    IA REAL
+                  <span className="text-[9px] uppercase font-mono font-semibold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                    IA Alta Costura
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-stone-500 font-medium">
-                Probador IA & Catálogo Express
+              <p className="text-[10px] tracking-wider uppercase text-stone-500 font-medium font-sans">
+                Boutique Virtual & Catálogo Lookbook
               </p>
             </div>
           </div>
@@ -157,67 +158,69 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className={`p-2 rounded-2xl border transition-all flex items-center gap-1.5 text-xs font-semibold ${
+              className={`p-2.5 rounded-2xl border transition-all flex items-center gap-1.5 text-xs font-semibold ${
                 isReady
-                  ? 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
+                  ? 'bg-white/80 border-[#EBDDC9]/80 text-stone-700 hover:bg-white shadow-xs'
                   : 'bg-amber-50 border-amber-300 text-amber-800 animate-pulse'
               }`}
               title="Ajustes de Demo"
               aria-label="Abrir ajustes de demo"
             >
               <Settings className="w-3.5 h-3.5 text-stone-700" />
-              <span className="hidden sm:inline text-xs">Ajustes</span>
+              <span className="hidden sm:inline text-xs font-serif-couture uppercase tracking-wider">Ajustes</span>
               {isReady ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200"></span>
               ) : (
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ring-2 ring-amber-200"></span>
               )}
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation Pill Bar */}
-        <div className="max-w-lg mx-auto mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('capture')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              activeTab === 'capture'
-                ? 'bg-stone-900 text-white shadow-xs'
-                : 'text-stone-600 hover:bg-stone-100'
-            }`}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            Probador en Vivo
-          </button>
-
-          {currentProduct && (
+        {/* Tab Navigation Pill Bar - Luxury Segmented Control */}
+        <div className="max-w-lg mx-auto mt-3">
+          <div className="bg-[#F0EAE1]/75 p-1 rounded-2xl border border-[#E5DAC8]/70 flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setActiveTab('result')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'result'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'text-stone-600 hover:bg-stone-100'
+              onClick={() => setActiveTab('capture')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === 'capture'
+                  ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Resultado
+              <Camera className="w-3.5 h-3.5" />
+              <span>Probador</span>
             </button>
-          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('catalog')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              activeTab === 'catalog'
-                ? 'bg-stone-900 text-white shadow-xs'
-                : 'text-stone-600 hover:bg-stone-100'
-            }`}
-          >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            Catálogo ({catalog.length})
-          </button>
+            {currentProduct && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('result')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  activeTab === 'result'
+                    ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <span>Look Creado</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('catalog')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === 'catalog'
+                  ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Colección ({catalog.length})</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -255,9 +258,10 @@ export default function App() {
             </div>
             <button
               onClick={() => setExecutionError(null)}
-              className="text-red-500 font-bold px-2 py-0.5 hover:bg-red-100 rounded text-sm"
+              className="text-red-500 font-bold p-1 hover:bg-red-100/80 rounded-lg"
+              aria-label="Cerrar error"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </aside>

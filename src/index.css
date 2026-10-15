@@ -8,8 +8,32 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.font-serif-couture {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+}
+
 .font-serif-fashion {
   font-family: 'Playfair Display', Georgia, serif;
+}
+
+.luxury-bg {
+  background: 
+    radial-gradient(120% 80% at 90% -10%, rgba(223, 202, 172, 0.25) 0%, transparent 60%),
+    radial-gradient(100% 60% at 0% 100%, rgba(235, 221, 201, 0.28) 0%, transparent 60%),
+    #FAF9F5;
+}
+
+.glass-luxury {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px -10px rgba(40, 30, 20, 0.04);
 }
 
 /* Custom smooth transitions and animations */
