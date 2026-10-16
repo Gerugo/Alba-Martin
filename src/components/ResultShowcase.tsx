@@ -381,10 +381,14 @@ export default function ResultShowcase({
               href="https://www.instagram.com/alba_martinmodas/"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-[#121110] text-[#C5A059] flex items-center justify-center font-serif font-bold text-sm border border-[#C5A059]/40 shadow-xs hover:scale-105 transition-transform"
+              className="w-10 h-10 rounded-full overflow-hidden border border-[#C5A059]/40 shadow-xs hover:scale-105 transition-transform flex-shrink-0 bg-white p-0.5"
               title="Abrir perfil @alba_martinmodas"
             >
-              AM
+              <img
+                src="/alba-martin-avatar.png"
+                alt="Alba Martín Modas"
+                className="w-full h-full object-cover rounded-full"
+              />
             </a>
             <div>
               <div className="flex items-center gap-1.5">

@@ -124,15 +124,6 @@ export default function App() {
   return (
     <div className="min-h-screen luxury-silk-bg text-[#121110] flex flex-col selection:bg-[#121110] selection:text-[#FAF7F2]">
       {/* ======================================================== */}
-      {/* TOP EDITORIAL TICKER BAR */}
-      {/* ======================================================== */}
-      <div className="bg-[#121110] text-[#C5A059] py-1.5 px-4 text-center border-b border-[#252321] select-none">
-        <p className="tracking-[0.2em] text-[10px] font-semibold uppercase font-sans">
-          ATELIER DIGITAL IA · FOTOGRAFÍA EDITORIAL 2K · SHOPIFY & PRESTASHOP READY
-        </p>
-      </div>
-
-      {/* ======================================================== */}
       {/* TOP NAVBAR HAUTE COUTURE / HIGH-FASHION EDITORIAL */}
       {/* ======================================================== */}
       <header className="border-b border-[#E8E2D9] glass-luxury sticky top-0 z-30 px-4 py-3 shadow-[0_4px_25px_-5px_rgba(18,17,16,0.03)]">
@@ -141,23 +132,15 @@ export default function App() {
             onClick={() => setActiveTab('capture')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-2xl bg-[#121110] text-[#C5A059] flex items-center justify-center shadow-md border border-[#2D2A26] group-hover:scale-105 transition-transform flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-[#C5A059]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-serif-editorial tracking-[0.06em] uppercase text-[#121110] font-bold leading-none">
-                  {settings.storeName || 'ALBA MARTÍN'}
-                </h1>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold tracking-wider uppercase bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse"></span>
-                  2K STUDIO ACTIVE
-                </span>
-              </div>
-              <p className="font-serif italic text-xs text-[#7A756D] mt-0.5">
-                Lookbook & Catálogo Inteligente
-              </p>
-            </div>
+            <img
+              src="/alba-martin-logo.png"
+              alt={settings.storeName || 'Alba Martín · Modas y Complementos'}
+              className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+            />
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold tracking-wider uppercase bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse"></span>
+              2K STUDIO
+            </span>
           </div>
 
           {/* Right Action: Settings gear & status */}
