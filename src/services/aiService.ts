@@ -4,7 +4,9 @@ import {
   ProductCategory,
   BackgroundType,
   TryOnEngine,
-  SceneStyle
+  SceneStyle,
+  ModelMode,
+  VirtualModelProfile
 } from '../types/catalog';
 
 export type TryOnStage =
@@ -17,7 +19,7 @@ export type TryOnStage =
   | 'completed';
 
 export interface TryOnParams {
-  modelDataUri: string;
+  modelDataUri?: string;
   garmentDataUri: string;
   garmentBase64Raw: string;
   secondaryGarmentDataUri?: string;
@@ -35,6 +37,9 @@ export interface TryOnParams {
   geminiKey: string;
   geminiModel?: string;
   simulationMode?: boolean;
+  modelMode?: ModelMode;
+  editorialRepose?: boolean;
+  virtualModel?: VirtualModelProfile;
   onStageChange?: (stage: TryOnStage) => void;
 }
 
@@ -46,8 +51,18 @@ export interface GeneratedMetadata {
   instagramCaption: string;
 }
 
+export const VIRTUAL_MODEL_DESCRIPTIONS: Record<VirtualModelProfile, string> = {
+  mediterranean:
+    'Sofia, a gorgeous 30-year-old Spanish fashion model with sun-kissed luminous olive skin, natural shoulder-length wavy brunette hair, warm honey eyes, and Massimo Dutti editorial lookbook elegance',
+  'nordic-studio':
+    'Chloe, a stunning 26-year-old international high-fashion runway model with an effortless messy updo, sculpted high cheekbones, luminous skin, and minimalist Zara Studio editorial campaign aesthetic',
+  'andalusian-chic':
+    'Lucia, an enchanting 34-year-old Andalusian woman with glossy dark hair, radiant warm smile, elegant posture, and sophisticated boutique guest elegance',
+};
+
 /**
  * Executes Virtual Try-On using top-tier Fal.ai models (Nano Banana Pro 2K, FLUX.2 Max HD, FASHN v1.6)
+ * Supports both real shop staff with editorial repose and virtual supermodels (Botika / Zara Studio style).
  */
 export async function runVirtualTryOn(
   modelDataUri: string,
@@ -56,18 +71,20 @@ export async function runVirtualTryOn(
   falKey: string,
   engine: TryOnEngine = 'nano-banana-pro',
   sceneStyle: SceneStyle = 'boutique',
-  simulationMode = false
+  simulationMode = false,
+  modelMode: ModelMode = 'real',
+  editorialRepose = true,
+  virtualModel: VirtualModelProfile = 'mediterranean'
 ): Promise<string> {
   if (simulationMode) {
     // Realistic simulation delay (2.5s)
     await new Promise((res) => setTimeout(res, 2500));
-    // Return model image or a clean high quality placeholder
-    return modelDataUri;
+    return modelDataUri || garmentDataUri;
   }
 
   if (!falKey || falKey.trim() === '') {
     throw new Error(
-      'Falta la clave Fal.ai API Key. Puedes añadirla en Ajustes o activar el Modo Simulación.'
+      'Falta la clave Ropa API Key. Puedes añadirla en el menú de Ajustes.'
     );
   }
 
@@ -86,12 +103,31 @@ export async function runVirtualTryOn(
     };
 
     const scenePrompt = scenePrompts[sceneStyle] || scenePrompts.boutique;
+    const isVirtual = modelMode === 'virtual' || !modelDataUri;
+    const virtualDesc = VIRTUAL_MODEL_DESCRIPTIONS[virtualModel] || VIRTUAL_MODEL_DESCRIPTIONS.mediterranean;
 
-    if (engine === 'nano-banana-pro') {
+    // Use Nano Banana Pro by default (and fallback from fashn if virtual model mode)
+    const activeEngine = isVirtual && engine === 'fashn-v16' ? 'nano-banana-pro' : engine;
+
+    if (activeEngine === 'nano-banana-pro') {
+      let prompt = '';
+      let imageUrls: string[] = [];
+
+      if (isVirtual) {
+        prompt = `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous full-body/three-quarter portrait of ${virtualDesc}. She is posing with a confident, dynamic, graceful high-fashion posture (subtle three-quarter turn, relaxed asymmetric shoulders, one hand casually in pocket or lightly touching the garment, elongated flattering camera angle from waist level). She is wearing the exact garment shown in the image with hyper-detailed fabric texture, natural folds, accurate print, and tailored fit (completely removing any hanger or tag). Pair with high-end coordinated trousers or skirt with subtle luxury styling. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 85mm f/1.4 lens, 2K resolution.`;
+        imageUrls = [garmentDataUri];
+      } else if (editorialRepose) {
+        prompt = `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from the first image, but transform her stiff snapshot posture into a confident, dynamic, flattering professional fashion model pose (subtle three-quarter turn, relaxed asymmetric shoulders, one hand casually in pocket or lightly resting near the garment, elongated flattering camera angle from waist level). She is wearing the exact garment from the second image with hyper-detailed fabric texture, natural folds, accurate print, and tailored fit (completely removing any hanger). Pair with high-end coordinated trousers/skirt and subtle luxury styling. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 85mm f/1.4 lens, 2K resolution.`;
+        imageUrls = [modelDataUri, garmentDataUri];
+      } else {
+        prompt = `Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions, maintaining her exact original pose) is wearing the exact garment shown in the second image. Reproduce the exact fabric pattern, colors, collar, sleeves, and natural drape of the garment from the second image with hyper-realistic texture, removing any hanger or tag. Pair it with flattering complementary trousers or skirt if only a top/jacket is provided. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`;
+        imageUrls = [modelDataUri, garmentDataUri];
+      }
+
       const result = await fal.subscribe('fal-ai/nano-banana-pro/edit', {
         input: {
-          prompt: `Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions) is wearing the exact garment shown in the second image. Reproduce the exact fabric pattern, colors, collar, sleeves, and natural drape of the garment from the second image with hyper-realistic texture, removing any hanger or tag. Pair it with flattering complementary trousers or skirt if only a top/jacket is provided. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`,
-          image_urls: [modelDataUri, garmentDataUri],
+          prompt,
+          image_urls: imageUrls,
           resolution: '2K',
           aspect_ratio: '3:4',
           output_format: 'jpeg',
@@ -110,11 +146,25 @@ export async function runVirtualTryOn(
       return generatedUrl;
     }
 
-    if (engine === 'flux-2-max') {
+    if (activeEngine === 'flux-2-max') {
+      let prompt = '';
+      let imageUrls: string[] = [];
+
+      if (isVirtual) {
+        prompt = `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous portrait of ${virtualDesc} posing with dynamic professional model posture, wearing the exact garment from @image1 with realistic drape, texture, and print without any hanger. ${scenePrompt} Ultra-sharp commercial photography.`;
+        imageUrls = [garmentDataUri];
+      } else if (editorialRepose) {
+        prompt = `High-fashion commercial lookbook campaign photography of the exact woman from @image1 wearing the exact garment from @image2. Preserve 100% of the facial identity, smile, hair, and eyes of @image1, while transforming her posture into a dynamic, confident, professional high-fashion pose with relaxed shoulders and natural hands. Render the exact print, cut, sleeves, and fabric texture of @image2 naturally on her body without any hanger. ${scenePrompt} Ultra-sharp commercial photography.`;
+        imageUrls = [modelDataUri, garmentDataUri];
+      } else {
+        prompt = `Professional fashion photography of the exact woman from @image1 wearing the exact garment from @image2. Preserve 100% of the facial identity, smile, hair, and body proportions of @image1. Render the exact print, cut, sleeves, and fabric texture of @image2 naturally on her body without any hanger. ${scenePrompt} Ultra-sharp commercial photography.`;
+        imageUrls = [modelDataUri, garmentDataUri];
+      }
+
       const result = await fal.subscribe('fal-ai/flux-2-max/edit', {
         input: {
-          prompt: `Professional fashion photography of the exact woman from @image1 wearing the exact garment from @image2. Preserve 100% of the facial identity, smile, hair, and body proportions of @image1. Render the exact print, cut, sleeves, and fabric texture of @image2 naturally on her body without any hanger. ${scenePrompt} Ultra-sharp commercial photography.`,
-          image_urls: [modelDataUri, garmentDataUri],
+          prompt,
+          image_urls: imageUrls,
           aspect_ratio: '3:4',
         } as any,
         logs: false,
@@ -130,7 +180,7 @@ export async function runVirtualTryOn(
       return generatedUrl;
     }
 
-    // Default: fashn-v16
+    // Default: fashn-v16 (solo si hay foto real de modelo)
     const result = await fal.subscribe('fal-ai/fashn/tryon/v1.6', {
       input: {
         model_image: modelDataUri,
@@ -155,7 +205,7 @@ export async function runVirtualTryOn(
   } catch (err: unknown) {
     console.error(`Error en Fal.ai Virtual Try-On (${engine}):`, err);
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Fallo en Fal.ai Try-On (${engine}): ${message}`);
+    throw new Error(`Fallo en Virtual Try-On (${engine}): ${message}`);
   }
 }
 
@@ -420,7 +470,7 @@ export async function executeLiveTryOnAndCatalog(
   params: TryOnParams
 ): Promise<CatalogProduct> {
   const {
-    modelDataUri,
+    modelDataUri = '',
     garmentDataUri,
     garmentBase64Raw,
     secondaryGarmentDataUri,
@@ -435,6 +485,9 @@ export async function executeLiveTryOnAndCatalog(
     falKey,
     geminiKey,
     simulationMode = false,
+    modelMode = 'real',
+    editorialRepose = true,
+    virtualModel = 'mediterranean',
     onStageChange,
   } = params;
 
@@ -450,7 +503,10 @@ export async function executeLiveTryOnAndCatalog(
         falKey,
         engine,
         sceneStyle,
-        simulationMode
+        simulationMode,
+        modelMode,
+        editorialRepose,
+        virtualModel
       );
 
       // Paso 2: Viste la prenda inferior sobre el resultado de la parte de arriba
@@ -462,7 +518,10 @@ export async function executeLiveTryOnAndCatalog(
         falKey,
         engine,
         sceneStyle,
-        simulationMode
+        simulationMode,
+        'real',
+        false, // conservar postura generada en el paso 1
+        virtualModel
       );
 
       return fullOutfitUrl;
@@ -475,7 +534,10 @@ export async function executeLiveTryOnAndCatalog(
         falKey,
         engine,
         sceneStyle,
-        simulationMode
+        simulationMode,
+        modelMode,
+        editorialRepose,
+        virtualModel
       );
     }
   })();
@@ -523,15 +585,18 @@ export async function executeLiveTryOnAndCatalog(
     title: metadata.title,
     handle: metadata.handle,
     descriptionHtml: metadata.descriptionHtml,
-    vendor: storeName || 'Boutique Rota',
+    vendor: storeName || 'ALBA MARTÍN',
     productCategory: isOutfit ? 'one-pieces' : category,
     backgroundType: params.backgroundType || 'original',
     isOutfit: Boolean(isOutfit),
+    modelMode,
+    editorialRepose,
+    virtualModel,
     tags: metadata.tags,
     price,
     sizes,
     skuPrefix: prefix,
-    modelPhotoBase64: modelDataUri,
+    modelPhotoBase64: modelMode === 'virtual' || !modelDataUri ? garmentDataUri : modelDataUri,
     garmentPhotoBase64: garmentDataUri,
     secondaryGarmentPhotoBase64: secondaryGarmentDataUri,
     resultImageUrl,

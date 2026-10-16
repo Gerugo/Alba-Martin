@@ -59,7 +59,7 @@ export default function App() {
 
     try {
       const product = await executeLiveTryOnAndCatalog({
-        modelDataUri: payload.modelImage.dataUri,
+        modelDataUri: payload.modelImage?.dataUri || '',
         garmentDataUri: payload.garmentImage.dataUri,
         garmentBase64Raw: payload.garmentImage.base64Raw,
         secondaryGarmentDataUri: payload.secondaryGarmentImage?.dataUri,
@@ -77,6 +77,9 @@ export default function App() {
         geminiKey: settings.geminiKey,
         geminiModel: settings.geminiModel,
         simulationMode: settings.simulationMode,
+        modelMode: payload.modelMode,
+        editorialRepose: payload.editorialRepose,
+        virtualModel: payload.virtualModel,
         onStageChange: (stage) => setProcessingStage(stage),
       });
 

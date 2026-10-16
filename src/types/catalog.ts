@@ -3,6 +3,8 @@ export type BackgroundType = 'original' | 'beach' | 'studio' | 'urban' | 'garden
 export type GarmentCaptureMode = 'single' | 'outfit';
 export type TryOnEngine = 'nano-banana-pro' | 'flux-2-max' | 'fashn-v16';
 export type SceneStyle = 'boutique' | 'studio' | 'street' | 'original';
+export type ModelMode = 'real' | 'virtual';
+export type VirtualModelProfile = 'mediterranean' | 'nordic-studio' | 'andalusian-chic';
 
 export interface CatalogProduct {
   id: string;
@@ -23,6 +25,9 @@ export interface CatalogProduct {
   instagramCaption: string;
   backgroundType?: BackgroundType;
   isOutfit?: boolean;
+  modelMode?: ModelMode;
+  editorialRepose?: boolean;
+  virtualModel?: VirtualModelProfile;
 }
 
 export interface DemoSettings {

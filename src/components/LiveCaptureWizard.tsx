@@ -7,7 +7,6 @@ import {
   Sparkles,
   Check,
   RefreshCw,
-  Info,
   Layers,
   Euro,
   BookmarkCheck,
@@ -16,21 +15,25 @@ import {
   Sun,
   X,
   Store,
-  Building2
+  Building2,
+  Sliders,
+  Crown
 } from 'lucide-react';
 import {
   ProductCategory,
   BackgroundType,
   CompressedImageResult,
   TryOnEngine,
-  SceneStyle
+  SceneStyle,
+  ModelMode,
+  VirtualModelProfile
 } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
 import { TryOnStage } from '../services/aiService';
 
 export interface ProcessPayload {
-  modelImage: CompressedImageResult;
+  modelImage?: CompressedImageResult | null;
   garmentImage: CompressedImageResult;
   secondaryGarmentImage?: CompressedImageResult | null;
   isOutfit: boolean;
@@ -41,6 +44,9 @@ export interface ProcessPayload {
   sceneStyle: SceneStyle;
   backgroundType: BackgroundType;
   customBackgroundImage?: CompressedImageResult | null;
+  modelMode: ModelMode;
+  editorialRepose: boolean;
+  virtualModel: VirtualModelProfile;
 }
 
 interface LiveCaptureWizardProps {
@@ -106,6 +112,36 @@ const SCENE_STYLE_OPTIONS: { id: SceneStyle; label: string; desc: string; icon: 
   },
 ];
 
+const VIRTUAL_MODELS: {
+  id: VirtualModelProfile;
+  name: string;
+  tagline: string;
+  desc: string;
+  badge: string;
+}[] = [
+  {
+    id: 'mediterranean',
+    name: 'Sofía',
+    tagline: 'Editorial Mediterránea',
+    desc: 'Mujer española de 30 años, melena castaña ondulada, piel bronceada luminosa y porte elegante estilo Massimo Dutti.',
+    badge: 'Massimo Dutti Chic',
+  },
+  {
+    id: 'nordic-studio',
+    name: 'Chloe',
+    tagline: 'Minimal Studio Zara',
+    desc: 'Modelo internacional de alta costura, 26 años, recogido desenfadado y facciones marcadas de pasarela editorial.',
+    badge: 'Zara Studio',
+  },
+  {
+    id: 'andalusian-chic',
+    name: 'Lucía',
+    tagline: 'Invitada & Boutique',
+    desc: 'Mujer andaluza de 34 años, pelo oscuro brillante, sonrisa cálida y porte sofisticado de evento.',
+    badge: 'Boutique & Invitada',
+  },
+];
+
 const RUNWAY_MESSAGES = [
   'Analizando caída del tejido y estampado...',
   'Aplicando iluminación fotográfica en resolución 2K...',
@@ -117,7 +153,12 @@ export default function LiveCaptureWizard({
   isProcessing,
   processingStage = 'idle',
 }: LiveCaptureWizardProps) {
-  // Model state
+  // Model Mode & Profile state
+  const [modelMode, setModelMode] = useState<ModelMode>('real');
+  const [editorialRepose, setEditorialRepose] = useState<boolean>(true);
+  const [virtualModel, setVirtualModel] = useState<VirtualModelProfile>('mediterranean');
+
+  // Real Model state
   const [modelImage, setModelImage] = useState<CompressedImageResult | null>(null);
   const [saveAsDefaultModel, setSaveAsDefaultModel] = useState<boolean>(true);
   const [hasSavedModelOnDisk, setHasSavedModelOnDisk] = useState<boolean>(false);
@@ -276,8 +317,8 @@ export default function LiveCaptureWizard({
   };
 
   const handleAction = () => {
-    if (!modelImage) {
-      setErrorMessage('Por favor, añade o haz la foto a la modelo (Paso 01).');
+    if (modelMode === 'real' && !modelImage) {
+      setErrorMessage('Por favor, añade o haz la foto a la modelo (Paso 01) o selecciona el modo Supermodelo Virtual IA.');
       return;
     }
     if (!garmentImage) {
@@ -294,7 +335,7 @@ export default function LiveCaptureWizard({
     }
     setErrorMessage(null);
     onProcess({
-      modelImage,
+      modelImage: modelMode === 'real' ? modelImage : null,
       garmentImage,
       secondaryGarmentImage,
       isOutfit,
@@ -305,15 +346,20 @@ export default function LiveCaptureWizard({
       sceneStyle,
       backgroundType: 'original',
       customBackgroundImage: null,
+      modelMode,
+      editorialRepose,
+      virtualModel,
     });
   };
 
   const canSubmit = Boolean(
-    modelImage &&
+    (modelMode === 'virtual' || modelImage) &&
     garmentImage &&
     (!isOutfit || secondaryGarmentImage) &&
     !isProcessing
   );
+
+  const selectedVirtualProfile = VIRTUAL_MODELS.find((m) => m.id === virtualModel) || VIRTUAL_MODELS[0];
 
   return (
     <div className="space-y-6 pb-28">
@@ -384,7 +430,7 @@ export default function LiveCaptureWizard({
       {/* ======================================================== */}
       {/* SECCIÓN 01 / LA MODELO */}
       {/* ======================================================== */}
-      <section className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D9] shadow-sm space-y-4">
+      <section className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D9] shadow-sm space-y-5">
         <div className="flex items-start justify-between">
           <div>
             <span className="font-serif text-xs uppercase tracking-[0.2em] text-[#C5A059] font-bold block mb-1">
@@ -395,148 +441,270 @@ export default function LiveCaptureWizard({
               La Modelo de Colección
             </h2>
             <p className="text-xs text-[#7A756D] mt-0.5">
-              Fotografía real de la dependienta o modelo habitual
+              Persona real de la tienda o supermodelo virtual de alta costura
             </p>
           </div>
-          {modelImage && (
+
+          {modelMode === 'virtual' ? (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#121110] bg-[#FAF7F2] px-3 py-1 rounded-full border border-[#C5A059]/40">
+              <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+              {selectedVirtualProfile.name}
+            </span>
+          ) : modelImage ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#121110] bg-[#FAF7F2] px-3 py-1 rounded-full border border-[#C5A059]/40">
               <Check className="w-3.5 h-3.5 text-[#C5A059] stroke-[2.5]" />
-              Lista
+              Foto Lista
             </span>
-          )}
+          ) : null}
         </div>
 
-        {/* Visual Guide Banner */}
-        <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-3.5 text-xs text-[#7A756D] flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-[#C5A059] flex-shrink-0 mt-0.5" />
-          <p className="leading-snug text-[11px]">
-            <strong className="text-[#121110]">Recomendación de encuadre:</strong> De plano medio o cuerpo entero, mirando al frente, con brazos relajados y luz natural uniforme.
-          </p>
+        {/* SELECTOR SUPERIOR DE MODO: PERSONA REAL VS SUPERMODELO VIRTUAL */}
+        <div className="bg-[#FAF7F2] p-1 rounded-2xl flex items-center border border-[#E8E2D9]">
+          <button
+            type="button"
+            onClick={() => setModelMode('real')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all text-center flex items-center justify-center gap-1.5 ${
+              modelMode === 'real'
+                ? 'bg-[#121110] text-[#FAF7F2] shadow-sm'
+                : 'text-[#7A756D] hover:text-[#121110]'
+            }`}
+          >
+            <User className={`w-3.5 h-3.5 ${modelMode === 'real' ? 'text-[#C5A059]' : 'text-[#7A756D]'}`} />
+            <span>Persona Real de la Tienda (Subir Foto)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModelMode('virtual')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all text-center flex items-center justify-center gap-1.5 ${
+              modelMode === 'virtual'
+                ? 'bg-[#121110] text-[#FAF7F2] shadow-sm'
+                : 'text-[#7A756D] hover:text-[#121110]'
+            }`}
+          >
+            <Crown className={`w-3.5 h-3.5 ${modelMode === 'virtual' ? 'text-[#C5A059]' : 'text-[#7A756D]'}`} />
+            <span>Supermodelo Virtual IA (Estilo Botika)</span>
+          </button>
         </div>
 
-        {/* Model Display: Polaroid Frame vs Upload Controls */}
-        {modelImage ? (
-          <div className="space-y-3">
-            {/* Polaroid Vertical Frame */}
-            <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-[#E8E2D9] shadow-sm">
-              <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-80 bg-stone-100 flex items-center justify-center">
-                <img
-                  src={modelImage.dataUri}
-                  alt="Modelo de colección"
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Floating 2K Resolution Tag */}
-                <div className="absolute top-2.5 left-2.5 backdrop-blur-md bg-[#121110]/80 border border-[#C5A059]/40 text-[#FAF7F2] px-2.5 py-1 rounded-full text-[10px] font-mono font-medium flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059]"></span>
-                  <span>2K OPTIMIZADO · {formatBytes(modelImage.fileSizeBytes)}</span>
-                </div>
-
-                {/* Floating Frosted Glass Action Button */}
-                <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => modelCameraInputRef.current?.click()}
-                    className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-[#7A756D]" />
-                    <span>Cambiar foto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => modelGalleryInputRef.current?.click()}
-                    className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all"
-                    title="Elegir de galería"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Save as default model toggle */}
-            <div className="pt-1 flex items-center justify-between text-xs text-[#7A756D] border-t border-[#E8E2D9]">
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={saveAsDefaultModel}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setSaveAsDefaultModel(checked);
-                    if (checked && modelImage) {
-                      saveModelToStorage(modelImage.dataUri, modelImage.fileSizeBytes);
-                      setHasSavedModelOnDisk(true);
-                    }
-                  }}
-                  className="rounded text-[#121110] focus:ring-[#121110] w-4 h-4 border-[#E8E2D9]"
-                />
-                <span className="text-[11px] font-medium text-[#121110]">
-                  Fijar como modelo habitual para agilizar futuras prendas
-                </span>
-              </label>
-
-              {hasSavedModelOnDisk && (
-                <button
-                  type="button"
-                  onClick={handleClearSavedModel}
-                  title="Eliminar modelo guardada"
-                  className="text-stone-400 hover:text-red-600 transition-colors p-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {hasSavedModelOnDisk && (
-              <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] flex items-center justify-between">
+        {/* ======================================================== */}
+        {/* MODO A: PERSONA REAL DE LA TIENDA */}
+        {/* ======================================================== */}
+        {modelMode === 'real' && (
+          <div className="space-y-4">
+            {/* INTERRUPTOR: RE-POSADO EDITORIAL AUTOMÁTICO */}
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-2">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BookmarkCheck className="w-4 h-4 text-[#C5A059]" />
-                  <span className="text-xs font-medium text-[#121110]">
-                    Modelo habitual disponible en memoria
+                  <Sliders className="w-4 h-4 text-[#C5A059]" />
+                  <span className="text-xs font-bold text-[#121110] font-serif tracking-wide">
+                    Re-Posado Editorial Automático (Estilo Revista)
+                  </span>
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#121110] text-[#C5A059]">
+                    Recomendado
                   </span>
                 </div>
+
+                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={editorialRepose}
+                    onChange={(e) => setEditorialRepose(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#121110]"></div>
+                </label>
+              </div>
+
+              <p className="text-[11px] text-[#7A756D] leading-relaxed">
+                {editorialRepose
+                  ? 'La IA mantiene el 100% de la cara, identidad y peinado de la mujer de la foto, pero cambia su postura rígida por una pose dinámica de modelo profesional de moda (ligero giro de 3/4, una mano en el bolsillo o tocando sutilmente la solapa, porte estilizado de campaña de Zara/Massimo Dutti, iluminación de revista y retoque comercial).'
+                  : 'Mantiene la postura original estática de la fotografía.'}
+              </p>
+            </div>
+
+            {/* Model Display: Polaroid Frame vs Upload Controls */}
+            {modelImage ? (
+              <div className="space-y-3">
+                {/* Polaroid Vertical Frame */}
+                <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-[#E8E2D9] shadow-sm">
+                  <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-80 bg-stone-100 flex items-center justify-center">
+                    <img
+                      src={modelImage.dataUri}
+                      alt="Modelo de colección"
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Floating 2K Resolution Tag */}
+                    <div className="absolute top-2.5 left-2.5 backdrop-blur-md bg-[#121110]/80 border border-[#C5A059]/40 text-[#FAF7F2] px-2.5 py-1 rounded-full text-[10px] font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059]"></span>
+                      <span>2K OPTIMIZADO · {formatBytes(modelImage.fileSizeBytes)}</span>
+                    </div>
+
+                    {/* Floating Frosted Glass Action Button */}
+                    <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => modelCameraInputRef.current?.click()}
+                        className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-[#7A756D]" />
+                        <span>Cambiar foto</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => modelGalleryInputRef.current?.click()}
+                        className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all"
+                        title="Elegir de galería"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save as default model toggle */}
+                <div className="pt-1 flex items-center justify-between text-xs text-[#7A756D] border-t border-[#E8E2D9]">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={saveAsDefaultModel}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSaveAsDefaultModel(checked);
+                        if (checked && modelImage) {
+                          saveModelToStorage(modelImage.dataUri, modelImage.fileSizeBytes);
+                          setHasSavedModelOnDisk(true);
+                        }
+                      }}
+                      className="rounded text-[#121110] focus:ring-[#121110] w-4 h-4 border-[#E8E2D9]"
+                    />
+                    <span className="text-[11px] font-medium text-[#121110]">
+                      Fijar como modelo habitual para agilizar futuras prendas
+                    </span>
+                  </label>
+
+                  {hasSavedModelOnDisk && (
+                    <button
+                      type="button"
+                      onClick={handleClearSavedModel}
+                      title="Eliminar modelo guardada"
+                      className="text-stone-400 hover:text-red-600 transition-colors p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {hasSavedModelOnDisk && (
+                  <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BookmarkCheck className="w-4 h-4 text-[#C5A059]" />
+                      <span className="text-xs font-medium text-[#121110]">
+                        Modelo habitual disponible en memoria
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUseSavedModel}
+                      className="text-xs font-semibold text-[#121110] bg-white px-3 py-1.5 rounded-xl border border-[#E8E2D9] shadow-xs hover:border-[#121110]"
+                    >
+                      Cargar
+                    </button>
+                  </div>
+                )}
+
+                {/* Primary camera capture button */}
                 <button
                   type="button"
-                  onClick={handleUseSavedModel}
-                  className="text-xs font-semibold text-[#121110] bg-white px-3 py-1.5 rounded-xl border border-[#E8E2D9] shadow-xs hover:border-[#121110]"
+                  onClick={() => modelCameraInputRef.current?.click()}
+                  disabled={isCompressingModel}
+                  className="w-full py-4 px-4 rounded-2xl bg-[#121110] text-[#FAF7F2] font-semibold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] transition-all hover:bg-black"
                 >
-                  Cargar
+                  {isCompressingModel ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#C5A059]" />
+                      Optimizando fotografía en alta resolución...
+                    </span>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 text-[#C5A059]" />
+                      <span>Hacer foto a la modelo ahora</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Secondary gallery upload button */}
+                <button
+                  type="button"
+                  onClick={() => modelGalleryInputRef.current?.click()}
+                  disabled={isCompressingModel}
+                  className="w-full py-3 px-4 rounded-2xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-medium text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
+                  <span>Elegir fotografía de la galería</span>
                 </button>
               </div>
             )}
+          </div>
+        )}
 
-            {/* Primary camera capture button */}
-            <button
-              type="button"
-              onClick={() => modelCameraInputRef.current?.click()}
-              disabled={isCompressingModel}
-              className="w-full py-4 px-4 rounded-2xl bg-[#121110] text-[#FAF7F2] font-semibold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] transition-all hover:bg-black"
-            >
-              {isCompressingModel ? (
-                <span className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-[#C5A059]" />
-                  Optimizando fotografía en alta resolución...
-                </span>
-              ) : (
-                <>
-                  <Camera className="w-4 h-4 text-[#C5A059]" />
-                  <span>Hacer foto a la modelo ahora</span>
-                </>
-              )}
-            </button>
+        {/* ======================================================== */}
+        {/* MODO B: SUPERMODELO VIRTUAL IA (SIN SUBIR FOTO) */}
+        {/* ======================================================== */}
+        {modelMode === 'virtual' && (
+          <div className="space-y-3 animate-in fade-in">
+            <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-3.5 text-xs text-[#7A756D] flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-[#C5A059] flex-shrink-0 mt-0.5" />
+              <p className="leading-snug text-[11px]">
+                <strong className="text-[#121110]">Sin fotos de personas:</strong> La IA vestirá a la supermodelo virtual seleccionada directamente con tu prenda en percha, creando una campaña editorial de pasarela.
+              </p>
+            </div>
 
-            {/* Secondary gallery upload button */}
-            <button
-              type="button"
-              onClick={() => modelGalleryInputRef.current?.click()}
-              disabled={isCompressingModel}
-              className="w-full py-3 px-4 rounded-2xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-medium text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-            >
-              <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-              <span>Elegir fotografía de la galería</span>
-            </button>
+            <div className="space-y-2.5">
+              {VIRTUAL_MODELS.map((model) => {
+                const active = virtualModel === model.id;
+                return (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => setVirtualModel(model.id)}
+                    className={`w-full p-4 rounded-2xl text-left border transition-all flex flex-col gap-1.5 ${
+                      active
+                        ? 'bg-[#121110] text-[#FAF7F2] border-[#121110] shadow-sm ring-1 ring-[#C5A059]/40'
+                        : 'bg-[#FAF7F2]/60 hover:bg-[#FAF7F2] text-[#121110] border-[#E8E2D9]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif font-bold text-sm tracking-wide">
+                          {model.name}
+                        </span>
+                        <span className={`text-[11px] font-serif italic ${active ? 'text-[#C5A059]' : 'text-[#7A756D]'}`}>
+                          · {model.tagline}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                            active
+                              ? 'bg-[#C5A059] text-[#121110]'
+                              : 'bg-white text-[#7A756D] border border-[#E8E2D9]'
+                          }`}
+                        >
+                          {model.badge}
+                        </span>
+                        {active && <Check className="w-4 h-4 text-[#C5A059]" />}
+                      </div>
+                    </div>
+                    <p className={`text-[11px] leading-relaxed ${active ? 'text-stone-300' : 'text-[#7A756D]'}`}>
+                      {model.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </section>
@@ -1040,17 +1208,17 @@ export default function LiveCaptureWizard({
 
           {!canSubmit && !isProcessing && (
             <p className="text-center text-[11px] text-[#7A756D] mt-2 font-medium">
-              {!modelImage && !garmentImage
+              {modelMode === 'real' && !modelImage && !garmentImage
                 ? 'Añade la foto de la modelo (Paso 01) y de la prenda (Paso 02)'
-                : !modelImage
-                ? 'Falta la foto de la modelo (Paso 01)'
+                : modelMode === 'real' && !modelImage
+                ? 'Falta la foto de la modelo (Paso 01) o elige Supermodelo Virtual'
                 : !garmentImage
                 ? isOutfit
                   ? 'Falta la foto de la parte superior (Paso 02)'
                   : 'Falta la foto de la prenda en percha (Paso 02)'
                 : isOutfit && !secondaryGarmentImage
                 ? 'Falta la foto de la parte inferior del conjunto'
-                : 'Completa las fotos requeridas'}
+                : 'Completa los datos requeridos'}
             </p>
           )}
         </div>
@@ -1069,12 +1237,22 @@ export default function LiveCaptureWizard({
 
             {/* Fusion visual container */}
             <div className="relative flex items-center justify-center gap-4 py-2">
-              {/* Model Thumbnail */}
-              {modelImage && (
+              {/* Model Thumbnail: Real or Virtual */}
+              {modelMode === 'real' && modelImage ? (
                 <div className="w-24 sm:w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-[#C5A059]/50 shadow-2xl relative bg-black">
                   <img src={modelImage.dataUri} alt="Modelo" className="w-full h-full object-cover" />
                   <span className="absolute bottom-1 left-1 right-1 text-[9px] bg-black/80 text-white rounded py-0.5 font-mono">
-                    MODELO
+                    MODELO REAL
+                  </span>
+                </div>
+              ) : (
+                <div className="w-24 sm:w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-[#C5A059]/50 shadow-2xl relative bg-[#1A1816] flex flex-col items-center justify-center p-3 text-center">
+                  <Crown className="w-6 h-6 text-[#C5A059] mb-1.5 animate-pulse" />
+                  <span className="font-serif font-bold text-sm text-[#FAF7F2]">
+                    {selectedVirtualProfile.name}
+                  </span>
+                  <span className="text-[9px] text-[#C5A059] font-mono mt-0.5">
+                    SUPERMODELO
                   </span>
                 </div>
               )}
