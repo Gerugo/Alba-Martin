@@ -16,6 +16,7 @@ export type TryOnEngine = 'nano-banana-pro' | 'flux-2-max' | 'fashn-v16';
 export type SceneStyle = 'boutique' | 'studio' | 'street' | 'original';
 export type ModelMode = 'real' | 'virtual';
 export type VirtualModelProfile = 'mediterranean' | 'nordic-studio' | 'andalusian-chic';
+export type ShotPackMode = 'single' | 'pack-3';
 
 export interface CatalogProduct {
   id: string;
@@ -34,6 +35,8 @@ export interface CatalogProduct {
   garmentPhotoBase64?: string;
   secondaryGarmentPhotoBase64?: string;
   resultImageUrl: string;
+  resultImageUrls?: string[];
+  shotPackMode?: ShotPackMode;
   instagramCaption: string;
   backgroundType?: BackgroundType;
   isOutfit?: boolean;

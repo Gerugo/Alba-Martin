@@ -28,7 +28,8 @@ import {
   ModelMode,
   VirtualModelProfile,
   LookItem,
-  LookItemCategory
+  LookItemCategory,
+  ShotPackMode
 } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
@@ -46,6 +47,7 @@ export interface ProcessPayload {
   garmentImage: CompressedImageResult;
   secondaryGarmentImage?: CompressedImageResult | null;
   garmentPhotos?: CompressedImageResult[];
+  shotPackMode: ShotPackMode;
   isOutfit: boolean;
   isLookCompleto?: boolean;
   lookItems?: LookItem[];
@@ -192,6 +194,7 @@ export default function LiveCaptureWizard({
   // Engine & Lighting Scene state
   const [engine, setEngine] = useState<TryOnEngine>('nano-banana-pro');
   const [sceneStyle, setSceneStyle] = useState<SceneStyle>('boutique');
+  const [shotPackMode, setShotPackMode] = useState<ShotPackMode>('pack-3');
 
   // Error alert
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -386,6 +389,7 @@ export default function LiveCaptureWizard({
       sizes,
       engine,
       sceneStyle,
+      shotPackMode,
       backgroundType: 'original',
       customBackgroundImage: null,
       modelMode,
@@ -1149,6 +1153,74 @@ export default function LiveCaptureWizard({
               })}
             </div>
           </div>
+
+          {/* SELECTOR DE FORMATO DE SESIÓN FOTOGRÁFICA */}
+          <div className="space-y-3 pt-4 border-t border-[#E8E2D9]">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#121110] uppercase tracking-wider flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-[#C5A059]" />
+                Formato de Sesión Fotográfica
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Tarjeta 1: Single */}
+              <button
+                type="button"
+                onClick={() => setShotPackMode('single')}
+                className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between ${
+                  shotPackMode === 'single'
+                    ? 'bg-[#121110] text-[#FAF7F2] border-[#121110] shadow-sm ring-1 ring-[#C5A059]/40'
+                    : 'bg-[#FAF7F2] text-[#121110] border-[#E8E2D9] hover:border-[#121110]'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-[#C5A059] uppercase">
+                      Toma Única
+                    </span>
+                    {shotPackMode === 'single' && (
+                      <Check className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="font-serif text-sm font-bold mb-1">
+                    1 Foto · Portada Lookbook
+                  </p>
+                  <p className={`text-xs leading-relaxed ${shotPackMode === 'single' ? 'text-stone-300' : 'text-[#7A756D]'}`}>
+                    Pose principal editorial · ~12 seg
+                  </p>
+                </div>
+              </button>
+
+              {/* Tarjeta 2: Pack 3 (Destacada) */}
+              <button
+                type="button"
+                onClick={() => setShotPackMode('pack-3')}
+                className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between ${
+                  shotPackMode === 'pack-3'
+                    ? 'bg-[#121110] text-[#FAF7F2] border-[#121110] shadow-md ring-2 ring-[#C5A059]'
+                    : 'bg-[#FAF7F2] text-[#121110] border-[#E8E2D9] hover:border-[#121110]'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#C5A059] text-[#121110] tracking-wider uppercase">
+                      CARRUSEL COMPLETO
+                    </span>
+                    {shotPackMode === 'pack-3' && (
+                      <Check className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="font-serif text-sm font-bold mb-1">
+                    Pack 3 Fotos · Carrusel E-commerce & IG
+                  </p>
+                  <p className={`text-xs leading-relaxed ${shotPackMode === 'pack-3' ? 'text-stone-300' : 'text-[#7A756D]'}`}>
+                    1. Plano General + 2. Ángulo en Movimiento + 3. Zoom Detalle de Tejido · Se generan a la vez en paralelo
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1169,7 +1241,13 @@ export default function LiveCaptureWizard({
           >
             <Sparkles className={`w-5 h-5 ${canSubmit ? 'text-[#C5A059]' : 'text-stone-400'}`} />
             <span>
-              {lookGarments.length >= 3
+              {shotPackMode === 'pack-3'
+                ? lookGarments.length >= 3
+                  ? `Generar Pack 3 Fotos Look Completo (${lookGarments.length} Piezas)`
+                  : lookGarments.length === 2
+                  ? 'Generar Pack 3 Fotos Conjunto (2 Piezas)'
+                  : 'Generar Pack Editorial 3 Fotos'
+                : lookGarments.length >= 3
                 ? `Vestir Look Completo (${lookGarments.length} Piezas) + Crear Ficha`
                 : lookGarments.length === 2
                 ? 'Vestir Conjunto 2 Piezas + Crear Ficha'

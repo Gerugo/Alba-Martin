@@ -100,6 +100,7 @@ export default function App() {
         modelMode: payload.modelMode,
         editorialRepose: payload.editorialRepose,
         virtualModel: payload.virtualModel,
+        shotPackMode: payload.shotPackMode,
         onStageChange: (stage) => setProcessingStage(stage),
       });
 

@@ -60,6 +60,7 @@ export function exportShopifyCSV(products: CatalogProduct[], filename?: string):
     'Variant Inventory Qty',
     'Variant Price',
     'Image Src',
+    'Image Position',
     'Status',
   ];
 
@@ -68,9 +69,17 @@ export function exportShopifyCSV(products: CatalogProduct[], filename?: string):
 
   products.forEach((product) => {
     const safeSizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['Única'];
+    const allImages =
+      product.resultImageUrls && product.resultImageUrls.length > 0
+        ? product.resultImageUrls
+        : product.resultImageUrl
+        ? [product.resultImageUrl]
+        : [];
 
     safeSizes.forEach((size, index) => {
       const isFirstVariant = index === 0;
+      const imageUrl = allImages[index] || (isFirstVariant ? allImages[0] || '' : '');
+      const imagePosition = imageUrl ? String(index + 1) : '';
 
       const rowValues = [
         escapeCsvCell(product.handle),
@@ -86,12 +95,38 @@ export function exportShopifyCSV(products: CatalogProduct[], filename?: string):
         escapeCsvCell(`${product.skuPrefix}-${size}`),
         '10',
         product.price.toFixed(2),
-        isFirstVariant ? escapeCsvCell(product.resultImageUrl) : '',
+        escapeCsvCell(imageUrl),
+        imagePosition,
         'active',
       ];
 
       rows.push(rowValues.join(','));
     });
+
+    // If there are more images than size variants, add extra image rows with the same handle
+    if (allImages.length > safeSizes.length) {
+      for (let imgIdx = safeSizes.length; imgIdx < allImages.length; imgIdx++) {
+        const extraRowValues = [
+          escapeCsvCell(product.handle),
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          escapeCsvCell(allImages[imgIdx]),
+          String(imgIdx + 1),
+          'active',
+        ];
+        rows.push(extraRowValues.join(','));
+      }
+    }
   });
 
   const csvContent = rows.join('\r\n');
@@ -130,6 +165,14 @@ export function exportPrestaShopCSV(products: CatalogProduct[], filename?: strin
 
     const categoryName = product.isLookCompleto ? 'Look Completo' : product.isOutfit ? 'Conjuntos' : product.productCategory;
 
+    const allImages =
+      product.resultImageUrls && product.resultImageUrls.length > 0
+        ? product.resultImageUrls
+        : product.resultImageUrl
+        ? [product.resultImageUrl]
+        : [];
+    const imagesCell = allImages.join(', ');
+
     const rowValues = [
       String(idx + 1),
       '1', // Activo
@@ -140,7 +183,7 @@ export function exportPrestaShopCSV(products: CatalogProduct[], filename?: strin
       escapeCsvCell(textSummary, delimiter),
       escapeCsvCell(product.descriptionHtml, delimiter),
       escapeCsvCell(product.tags.join(', '), delimiter),
-      escapeCsvCell(product.resultImageUrl, delimiter),
+      escapeCsvCell(imagesCell, delimiter),
     ];
 
     rows.push(rowValues.join(delimiter));

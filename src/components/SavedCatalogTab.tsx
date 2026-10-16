@@ -244,6 +244,11 @@ export default function SavedCatalogTab({
 
                     {/* Badge top-left */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
+                      {item.resultImageUrls && item.resultImageUrls.length > 1 ? (
+                        <span className="text-[9px] uppercase tracking-wider bg-[#C5A059] text-[#121110] px-2 py-0.5 rounded font-mono font-bold">
+                          Pack {item.resultImageUrls.length} Fotos
+                        </span>
+                      ) : null}
                       {item.isLookCompleto ? (
                         <span className="text-[9px] uppercase tracking-wider bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 px-2 py-0.5 rounded font-mono font-bold">
                           Look Completo
@@ -257,6 +262,20 @@ export default function SavedCatalogTab({
                         {item.productCategory}
                       </span>
                     </div>
+
+                    {/* Carousel indicator dots */}
+                    {item.resultImageUrls && item.resultImageUrls.length > 1 && (
+                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1 z-10 pointer-events-none">
+                        {item.resultImageUrls.map((_, dotIdx) => (
+                          <span
+                            key={dotIdx}
+                            className={`h-1 rounded-full ${
+                              dotIdx === 0 ? 'w-3.5 bg-[#C5A059]' : 'w-1 bg-white/70'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
 
                     {/* Floating Zoom / Open on hover */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

@@ -16,7 +16,8 @@ import {
   Minus,
   MoveHorizontal,
   Instagram,
-  ShoppingBag
+  ShoppingBag,
+  Images
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
 import { buildWhatsAppMessage } from '../utils/whatsappHelper';
@@ -31,6 +32,18 @@ interface ResultShowcaseProps {
 
 type ComparisonMode = 'slider' | 'after' | 'before' | 'side-by-side';
 
+const SHOT_LABELS = [
+  '01 / PORTADA LOOKBOOK',
+  '02 / ÁNGULO EN MOVIMIENTO',
+  '03 / ZOOM DETALLE TEJIDO',
+];
+
+const SHOT_FILENAMES = [
+  'look-1-portada.jpg',
+  'look-2-angulo.jpg',
+  'look-3-zoom-detalle.jpg',
+];
+
 export default function ResultShowcase({
   product,
   storePhone,
@@ -42,6 +55,16 @@ export default function ResultShowcase({
   const [sliderPos, setSliderPos] = useState<number>(50);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0);
+  const [isDownloadingPack, setIsDownloadingPack] = useState<boolean>(false);
+
+  const resultImages =
+    product.resultImageUrls && product.resultImageUrls.length > 0
+      ? product.resultImageUrls
+      : [product.resultImageUrl];
+  const isMultiShot = resultImages.length > 1;
+  const currentActiveImage = resultImages[activePhotoIndex] || product.resultImageUrl;
 
   const [captionText, setCaptionText] = useState<string>(product.instagramCaption);
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -68,25 +91,61 @@ export default function ResultShowcase({
     }
   };
 
-  // Download high-res result photo
+  // Download single active photo
   const handleDownloadPhoto = async () => {
+    const filename = isMultiShot
+      ? SHOT_FILENAMES[activePhotoIndex] || `look-${activePhotoIndex + 1}.jpg`
+      : `lookbook-2k-${product.handle}.jpg`;
+
     try {
-      const response = await fetch(product.resultImageUrl);
+      const response = await fetch(currentActiveImage);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `lookbook-2k-${product.handle}.jpg`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch {
       const link = document.createElement('a');
-      link.href = product.resultImageUrl;
+      link.href = currentActiveImage;
       link.target = '_blank';
-      link.download = `lookbook-2k-${product.handle}.jpg`;
+      link.download = filename;
       link.click();
+    }
+  };
+
+  // Download full pack of 3 HD photos
+  const handleDownloadPack = async () => {
+    setIsDownloadingPack(true);
+    try {
+      for (let i = 0; i < resultImages.length; i++) {
+        const url = resultImages[i];
+        const filename = SHOT_FILENAMES[i] || `look-${i + 1}.jpg`;
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.download = filename;
+          link.click();
+        }
+        await new Promise((res) => setTimeout(res, 350));
+      }
+    } finally {
+      setIsDownloadingPack(false);
     }
   };
 
@@ -138,13 +197,15 @@ export default function ResultShowcase({
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 mb-2 shadow-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse"></span>
-              EDICIÓN 2K · LISTA PARA PUBLICAR
+              {isMultiShot ? 'CARRUSEL EDITORIAL 3 FOTOS · LISTO PARA PUBLICAR' : 'EDICIÓN 2K · LISTA PARA PUBLICAR'}
             </div>
             <h2 className="text-xl font-serif text-[#121110] font-bold">
-              Portada de Lookbook Editorial
+              {isMultiShot ? 'Carrusel Lookbook Editorial (3 Fotos)' : 'Portada de Lookbook Editorial'}
             </h2>
             <p className="text-xs text-[#7A756D] mt-0.5">
-              Desliza el dedo o el ratón para comparar la prenda original con la modelo estilizada
+              {isMultiShot
+                ? 'Plano general, ángulo en movimiento y zoom macro en alta resolución'
+                : 'Desliza el dedo o el ratón para comparar la prenda original con la modelo estilizada'}
             </p>
           </div>
 
@@ -211,7 +272,7 @@ export default function ResultShowcase({
           >
             {/* Base layer: RESULT (After - Model) */}
             <img
-              src={product.resultImageUrl}
+              src={currentActiveImage}
               alt="Modelo vistiendo la prenda"
               className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             />
@@ -246,7 +307,7 @@ export default function ResultShowcase({
               ORIGINAL (PERCHA)
             </span>
             <span className="absolute bottom-3 right-3 backdrop-blur-md bg-[#121110]/85 text-[#C5A059] text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg pointer-events-none border border-[#C5A059]/40">
-              ESTILISMO IA (2K)
+              {isMultiShot ? SHOT_LABELS[activePhotoIndex] : 'ESTILISMO IA (2K)'}
             </span>
 
             {/* Zoom Inspection trigger */}
@@ -269,7 +330,7 @@ export default function ResultShowcase({
         {viewMode === 'after' && (
           <div className="relative rounded-2xl overflow-hidden aspect-[3/4] max-h-[560px] bg-stone-100 border border-[#E8E2D9] shadow-md group">
             <img
-              src={product.resultImageUrl}
+              src={currentActiveImage}
               alt="Modelo 2K"
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => {
@@ -278,7 +339,7 @@ export default function ResultShowcase({
               }}
             />
             <span className="absolute bottom-3 left-3 backdrop-blur-md bg-[#121110]/85 text-[#C5A059] text-[10px] font-mono font-bold px-3 py-1 rounded-xl border border-[#C5A059]/40">
-              ESTILISMO IA 2K FINAL
+              {isMultiShot ? SHOT_LABELS[activePhotoIndex] : 'ESTILISMO IA 2K FINAL'}
             </span>
             <button
               type="button"
@@ -350,13 +411,71 @@ export default function ResultShowcase({
               className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-stone-100 border border-[#E8E2D9] cursor-pointer group"
             >
               <img
-                src={product.resultImageUrl}
+                src={currentActiveImage}
                 alt="Modelo"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <span className="absolute bottom-2 left-2 bg-[#121110] text-[#C5A059] text-[9px] font-mono px-2 py-0.5 rounded border border-[#C5A059]/40">
-                MODELO 2K
+                {isMultiShot ? SHOT_LABELS[activePhotoIndex] : 'MODELO 2K'}
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* CARRUSEL / GALERÍA INTERACTIVA DE MODA (3 FOTOS) */}
+        {isMultiShot && (
+          <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-3.5 sm:p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-serif text-xs uppercase tracking-[0.15em] text-[#C5A059] font-bold flex items-center gap-1.5">
+                <Images className="w-3.5 h-3.5 text-[#C5A059]" />
+                Carrusel Editorial · 3 Tomas en Paralelo
+              </span>
+              <span className="text-[10px] font-mono text-[#7A756D]">
+                Selecciona una toma para inspeccionar
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {resultImages.map((imgUrl, idx) => {
+                const isActive = activePhotoIndex === idx;
+                const shotTitles = ['01 / Portada', '02 / Movimiento', '03 / Zoom'];
+                const shotSubtitles = ['Plano General', 'Ángulo Dinámico', 'Detalle Tejido'];
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActivePhotoIndex(idx)}
+                    className={`relative rounded-xl overflow-hidden aspect-[3/4] border-2 transition-all text-left flex flex-col justify-end p-2 group cursor-pointer ${
+                      isActive
+                        ? 'border-[#C5A059] ring-2 ring-[#C5A059]/40 shadow-md scale-[1.02]'
+                        : 'border-[#E8E2D9] hover:border-[#121110] opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={SHOT_LABELS[idx] || `Toma ${idx + 1}`}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+
+                    <div className="relative z-10">
+                      <span className="text-[9px] font-mono font-bold text-white block uppercase tracking-wider">
+                        {shotTitles[idx] || `Toma 0${idx + 1}`}
+                      </span>
+                      <span className={`text-[10px] sm:text-xs font-serif font-bold line-clamp-1 ${
+                        isActive ? 'text-[#C5A059]' : 'text-stone-300'
+                      }`}>
+                        {shotSubtitles[idx] || 'Editorial'}
+                      </span>
+                    </div>
+
+                    {isActive && (
+                      <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C5A059] ring-2 ring-white shadow-xs" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -405,15 +524,42 @@ export default function ResultShowcase({
           </div>
         )}
 
-        {/* Download Button */}
-        <button
-          type="button"
-          onClick={handleDownloadPhoto}
-          className="w-full py-3.5 px-4 rounded-2xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-serif text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.99]"
-        >
-          <Download className="w-4 h-4 text-[#C5A059]" />
-          <span>Descargar Fotografía Editorial 2K en Alta Definición</span>
-        </button>
+        {/* Botones de Descarga: Pack Completo (3 Fotos HD) o Foto individual */}
+        {isMultiShot ? (
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={handleDownloadPack}
+              disabled={isDownloadingPack}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#121110] hover:bg-black text-[#FAF7F2] font-serif text-sm font-semibold flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.99] border border-[#C5A059]/40 cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-[#C5A059]" />
+              <span>
+                {isDownloadingPack
+                  ? 'Descargando Pack (3 Fotos HD)...'
+                  : 'Descargar Pack Completo (3 Fotos HD)'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPhoto}
+              className="w-full py-2.5 px-4 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#7A756D] hover:text-[#121110] font-serif text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#7A756D]" />
+              <span>Descargar solo la foto activa ({SHOT_LABELS[activePhotoIndex]})</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleDownloadPhoto}
+            className="w-full py-3.5 px-4 rounded-2xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-serif text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.99]"
+          >
+            <Download className="w-4 h-4 text-[#C5A059]" />
+            <span>Descargar Fotografía Editorial 2K en Alta Definición</span>
+          </button>
+        )}
       </section>
 
       {/* ======================================================== */}
@@ -685,7 +831,11 @@ export default function ResultShowcase({
                 Inspección de Tejido & Confección en Alta Definición
               </p>
               <p className="text-[11px] text-[#C5A059]">
-                {viewMode === 'before' ? 'Fotografía original en percha' : 'Estilismo IA 2K sobre la modelo'}
+                {viewMode === 'before'
+                  ? 'Fotografía original en percha'
+                  : isMultiShot
+                  ? SHOT_LABELS[activePhotoIndex]
+                  : 'Estilismo IA 2K sobre la modelo'}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -722,7 +872,7 @@ export default function ResultShowcase({
           {/* Zoomable Image Container */}
           <div className="flex-1 overflow-auto flex items-center justify-center my-4 select-none touch-pan-x touch-pan-y">
             <img
-              src={viewMode === 'before' ? primaryGarmentPhoto : product.resultImageUrl}
+              src={viewMode === 'before' ? primaryGarmentPhoto : currentActiveImage}
               alt="Detalle en alta definición"
               style={{
                 transform: `scale(${zoomLevel})`,
