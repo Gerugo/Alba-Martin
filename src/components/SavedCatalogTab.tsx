@@ -237,7 +237,7 @@ export default function SavedCatalogTab({
                     className="relative aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-stone-100 cursor-pointer border border-[#E8E2D9]"
                   >
                     <img
-                      src={item.resultImageUrl || item.garmentPhotoBase64}
+                      src={item.resultImageUrl || item.garmentPhotosBase64?.[0] || item.garmentPhotoBase64}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

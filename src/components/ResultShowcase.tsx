@@ -55,6 +55,8 @@ export default function ResultShowcase({
   const [isZoomModalOpen, setIsZoomModalOpen] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.5);
 
+  const primaryGarmentPhoto = product.garmentPhotosBase64?.[0] || product.garmentPhotoBase64 || '';
+
   // Copy caption to clipboard
   const handleCopyCaption = async () => {
     try {
@@ -222,7 +224,7 @@ export default function ResultShowcase({
               }}
             >
               <img
-                src={product.garmentPhotoBase64}
+                src={primaryGarmentPhoto}
                 alt="Prenda en percha"
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
@@ -296,7 +298,7 @@ export default function ResultShowcase({
         {viewMode === 'before' && (
           <div className="relative rounded-2xl overflow-hidden aspect-[3/4] max-h-[560px] bg-stone-100 border border-[#E8E2D9] shadow-md group">
             <img
-              src={product.garmentPhotoBase64}
+              src={primaryGarmentPhoto}
               alt="Prenda en percha"
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => {
@@ -332,7 +334,7 @@ export default function ResultShowcase({
               className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-stone-100 border border-[#E8E2D9] cursor-pointer group"
             >
               <img
-                src={product.garmentPhotoBase64}
+                src={primaryGarmentPhoto}
                 alt="Original"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
@@ -720,7 +722,7 @@ export default function ResultShowcase({
           {/* Zoomable Image Container */}
           <div className="flex-1 overflow-auto flex items-center justify-center my-4 select-none touch-pan-x touch-pan-y">
             <img
-              src={viewMode === 'before' ? product.garmentPhotoBase64 : product.resultImageUrl}
+              src={viewMode === 'before' ? primaryGarmentPhoto : product.resultImageUrl}
               alt="Detalle en alta definición"
               style={{
                 transform: `scale(${zoomLevel})`,

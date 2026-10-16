@@ -30,7 +30,8 @@ export interface CatalogProduct {
   sizes: string[];
   skuPrefix: string;
   modelPhotoBase64: string;
-  garmentPhotoBase64: string;
+  garmentPhotosBase64: string[];
+  garmentPhotoBase64?: string;
   secondaryGarmentPhotoBase64?: string;
   resultImageUrl: string;
   instagramCaption: string;

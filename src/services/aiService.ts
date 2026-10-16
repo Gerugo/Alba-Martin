@@ -808,31 +808,39 @@ export async function executeLiveTryOnAndCatalog(
   const prefix = `ROT-${randomSuffix}`;
   const id = `prod_${Date.now()}_${randomSuffix}`;
 
-  const product: CatalogProduct = {
-    id,
-    createdAt: new Date().toISOString(),
-    title: metadata.title,
-    handle: metadata.handle,
-    descriptionHtml: metadata.descriptionHtml,
-    vendor: storeName || 'ALBA MARTÍN',
-    productCategory: isLookCompleto || isOutfit ? 'one-pieces' : category,
-    backgroundType: params.backgroundType || 'original',
-    isOutfit: Boolean(isOutfit || isLookCompleto),
-    isLookCompleto: Boolean(isLookCompleto),
-    lookItems: isLookCompleto ? lookItems : undefined,
-    modelMode,
-    editorialRepose,
-    virtualModel,
-    tags: metadata.tags,
-    price,
-    sizes,
-    skuPrefix: prefix,
-    modelPhotoBase64: modelMode === 'virtual' || !modelDataUri ? (lookItems[0]?.dataUri || garmentDataUri) : modelDataUri,
-    garmentPhotoBase64: lookItems[0]?.dataUri || garmentDataUri,
-    secondaryGarmentPhotoBase64: lookItems[1]?.dataUri || secondaryGarmentDataUri,
-    resultImageUrl,
-    instagramCaption: metadata.instagramCaption,
-  };
+    const photosList: string[] =
+      isLookCompleto && lookItems && lookItems.length > 0
+        ? lookItems.map((i) => i.dataUri)
+        : secondaryGarmentDataUri
+        ? [garmentDataUri, secondaryGarmentDataUri]
+        : [garmentDataUri];
+
+    const product: CatalogProduct = {
+      id,
+      createdAt: new Date().toISOString(),
+      title: metadata.title,
+      handle: metadata.handle,
+      descriptionHtml: metadata.descriptionHtml,
+      vendor: storeName || 'ALBA MARTÍN',
+      productCategory: isLookCompleto || isOutfit ? 'one-pieces' : category,
+      backgroundType: params.backgroundType || 'original',
+      isOutfit: Boolean(isOutfit || isLookCompleto),
+      isLookCompleto: Boolean(isLookCompleto),
+      lookItems: isLookCompleto ? lookItems : undefined,
+      modelMode,
+      editorialRepose,
+      virtualModel,
+      tags: metadata.tags,
+      price,
+      sizes,
+      skuPrefix: prefix,
+      modelPhotoBase64: modelMode === 'virtual' || !modelDataUri ? (photosList[0] || garmentDataUri) : modelDataUri,
+      garmentPhotosBase64: photosList,
+      garmentPhotoBase64: photosList[0] || garmentDataUri,
+      secondaryGarmentPhotoBase64: photosList[1] || secondaryGarmentDataUri,
+      resultImageUrl,
+      instagramCaption: metadata.instagramCaption,
+    };
 
   return product;
 }
