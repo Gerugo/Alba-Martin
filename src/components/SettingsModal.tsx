@@ -16,7 +16,7 @@ export default function SettingsModal({
   onSave,
 }: SettingsModalProps) {
   const [formData, setFormData] = useState<DemoSettings>(settings);
-  const [showNotification, setShowNotification] = useState(false);
+  const [showNotification, setShowNotification] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -35,23 +35,23 @@ export default function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full sm:max-w-md glass-card rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden border border-[#E8DFC8]/90 max-h-[92vh] flex flex-col">
+      <div className="w-full sm:max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden border border-[#E8E2D9] max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-[#EDE4D5] flex items-center justify-between bg-[#FAF8F5]/90">
+        <div className="px-6 py-5 border-b border-[#E8E2D9] flex items-center justify-between bg-[#FAF7F2]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#1A1816] text-[#D4AF37] ring-1 ring-white/10 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-[#121110] text-[#C5A059] flex items-center justify-center shadow-xs">
               <Key className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-[#1A1816] text-base font-serif-couture tracking-wide">
+              <h2 className="font-bold text-[#121110] text-base font-serif tracking-wide">
                 Ajustes de la Plataforma
               </h2>
-              <p className="text-xs text-stone-500">Configuración operativa para la boutique</p>
+              <p className="text-xs text-[#7A756D]">Configuración operativa para la boutique</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-800 hover:bg-[#FAF6F0] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#7A756D] hover:text-[#121110] hover:bg-black/5 transition-colors"
             aria-label="Cerrar ajustes"
           >
             <X className="w-5 h-5" />
@@ -63,8 +63,8 @@ export default function SettingsModal({
           {/* Fal.ai Key */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-[#8C7654]" />
+              <label className="text-xs font-semibold text-[#121110] flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-[#C5A059]" />
                 Fal.ai API Key
               </label>
               {hasEnvFal && (
@@ -78,15 +78,15 @@ export default function SettingsModal({
               value={formData.falKey}
               onChange={(e) => setFormData({ ...formData, falKey: e.target.value })}
               placeholder="fal_sk_..."
-              className="w-full text-xs font-mono px-4 py-3 rounded-2xl border border-[#E5DAC8] focus:border-[#1A1816] focus:ring-1 focus:ring-[#1A1816] outline-none transition-all bg-[#FAF8F5]/60 text-stone-800"
+              className="w-full text-xs font-mono px-4 py-3 rounded-2xl border border-[#E8E2D9] focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all bg-[#FAF7F2] text-[#121110]"
             />
           </div>
 
           {/* Gemini API Key */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-[#8C7654]" />
+              <label className="text-xs font-semibold text-[#121110] flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-[#C5A059]" />
                 Gemini API Key
               </label>
               {hasEnvGemini && (
@@ -100,54 +100,51 @@ export default function SettingsModal({
               value={formData.geminiKey}
               onChange={(e) => setFormData({ ...formData, geminiKey: e.target.value })}
               placeholder="AIzaSy..."
-              className="w-full text-xs font-mono px-4 py-3 rounded-2xl border border-[#E5DAC8] focus:border-[#1A1816] focus:ring-1 focus:ring-[#1A1816] outline-none transition-all bg-[#FAF8F5]/60 text-stone-800"
+              className="w-full text-xs font-mono px-4 py-3 rounded-2xl border border-[#E8E2D9] focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all bg-[#FAF7F2] text-[#121110]"
             />
           </div>
 
-          {/* Selector de Modelo Gemini */}
+          {/* Gemini Model Selector */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-stone-700 flex items-center justify-between">
+            <label className="text-xs font-semibold text-[#121110] flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
                 Modelo Gemini IA
               </span>
-              <span className="text-[10px] text-[#7A6A55] bg-[#FAF8F5] border border-[#EDE4D5] px-2.5 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] text-[#C5A059] bg-[#FAF7F2] border border-[#E8E2D9] px-2.5 py-0.5 rounded-full font-medium">
                 3.6 recomendado
               </span>
             </label>
             <select
               value={formData.geminiModel || 'gemini-3.6-flash'}
               onChange={(e) => setFormData({ ...formData, geminiModel: e.target.value })}
-              className="w-full text-xs px-4 py-3 rounded-2xl border border-[#E5DAC8] focus:border-[#1A1816] focus:ring-1 focus:ring-[#1A1816] outline-none transition-all bg-[#FAF8F5]/90 font-medium text-stone-800"
+              className="w-full text-xs px-4 py-3 rounded-2xl border border-[#E8E2D9] focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all bg-[#FAF7F2] font-medium text-[#121110]"
             >
               <option value="gemini-3.6-flash">Gemini 3.6 Flash (Ultrarrápido, 1.7s, máxima estabilidad)</option>
               <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mayor capacidad)</option>
               <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Económico / Ligero)</option>
             </select>
-            <p className="text-[11px] text-stone-500">
-              Para generar títulos comerciales y posts de Instagram, 3.6 Flash ofrece el mejor rendimiento.
-            </p>
           </div>
 
-          {/* Nombre de la Tienda */}
+          {/* Store Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-              <Store className="w-3.5 h-3.5 text-[#8C7654]" />
+            <label className="text-xs font-semibold text-[#121110] flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-[#C5A059]" />
               Nombre de la Boutique
             </label>
             <input
               type="text"
               value={formData.storeName}
               onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
-              placeholder="Ej. Alba Martín Boutique"
-              className="w-full text-sm px-4 py-3 rounded-2xl border border-[#E5DAC8] focus:border-[#1A1816] focus:ring-1 focus:ring-[#1A1816] outline-none transition-all bg-[#FAF8F5]/60 text-stone-800"
+              placeholder="Ej. Alba Martín"
+              className="w-full text-sm px-4 py-3 rounded-2xl border border-[#E8E2D9] focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all bg-[#FAF7F2] text-[#121110]"
             />
           </div>
 
-          {/* Teléfono WhatsApp */}
+          {/* Phone WhatsApp */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-[#8C7654]" />
+            <label className="text-xs font-semibold text-[#121110] flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-[#C5A059]" />
               Teléfono WhatsApp (con prefijo de país)
             </label>
             <input
@@ -155,22 +152,19 @@ export default function SettingsModal({
               value={formData.storePhone}
               onChange={(e) => setFormData({ ...formData, storePhone: e.target.value })}
               placeholder="34600000000"
-              className="w-full text-sm font-mono px-4 py-3 rounded-2xl border border-[#E5DAC8] focus:border-[#1A1816] focus:ring-1 focus:ring-[#1A1816] outline-none transition-all bg-[#FAF8F5]/60 text-stone-800"
+              className="w-full text-sm font-mono px-4 py-3 rounded-2xl border border-[#E8E2D9] focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all bg-[#FAF7F2] text-[#121110]"
             />
-            <p className="text-[11px] text-stone-500">
-              Número receptor para los enlaces directos de pedidos por WhatsApp.
-            </p>
           </div>
 
-          {/* Modo Simulación (Fallback) */}
-          <div className="p-4 rounded-2xl bg-[#FAF6F0] border border-[#E8DFC8] flex items-center justify-between gap-3">
+          {/* Simulation Mode */}
+          <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-[#5C4D38]">
-                <Zap className="w-3.5 h-3.5 text-[#8C7654]" />
-                Modo Simulación (Fallback)
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#121110]">
+                <Zap className="w-3.5 h-3.5 text-[#C5A059]" />
+                Modo Simulación (Demo Local)
               </div>
-              <p className="text-[11px] text-[#7A6A55] leading-snug">
-                Actívalo si no hay buena cobertura 4G/WiFi dentro del local.
+              <p className="text-[11px] text-[#7A756D] leading-snug">
+                Actívalo si no hay buena cobertura o para demostraciones sin consumir crédito de API.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
@@ -180,14 +174,14 @@ export default function SettingsModal({
                 onChange={(e) => setFormData({ ...formData, simulationMode: e.target.checked })}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1A1816]"></div>
+              <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#121110]"></div>
             </label>
           </div>
 
           {/* Validation tip */}
           {!formData.falKey && !formData.geminiKey && !formData.simulationMode && (
-            <div className="flex items-start gap-2 p-3.5 bg-red-50/80 text-red-700 rounded-2xl border border-red-200/80 text-xs">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3.5 bg-amber-50 text-amber-800 rounded-2xl border border-amber-200 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
               <span>
                 Faltan claves de API. Puedes introducirlas aquí o activar el <strong>Modo Simulación</strong> para la demo.
               </span>
@@ -198,7 +192,7 @@ export default function SettingsModal({
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-4 px-4 rounded-2xl font-serif-couture tracking-wider font-semibold text-sm bg-gradient-to-r from-[#1A1816] via-[#24211E] to-[#1A1816] text-[#F5EFE6] hover:bg-black active:scale-[0.99] transition-all shadow-md"
+              className="w-full py-4 px-4 rounded-2xl font-serif tracking-wider font-semibold text-sm bg-[#121110] text-[#FAF7F2] hover:bg-black active:scale-[0.99] transition-all shadow-md"
             >
               {showNotification ? 'Configuración guardada' : 'Guardar y Continuar'}
             </button>

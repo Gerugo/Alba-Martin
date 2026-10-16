@@ -122,36 +122,40 @@ export default function App() {
   const isReady = (hasFalKey && hasGeminiKey) || settings.simulationMode;
 
   return (
-    <div className="min-h-screen luxury-bg text-stone-900 flex flex-col selection:bg-[#1A1816] selection:text-[#F5EFE6]">
+    <div className="min-h-screen luxury-silk-bg text-[#121110] flex flex-col selection:bg-[#121110] selection:text-[#FAF7F2]">
       {/* ======================================================== */}
-      {/* TOP NAVBAR HAUTE COUTURE MOBILE-FIRST */}
+      {/* TOP EDITORIAL TICKER BAR */}
       {/* ======================================================== */}
-      <header className="border-b border-[#EBDDC9]/60 glass-luxury sticky top-0 z-30 px-4 py-3 shadow-[0_4px_25px_-5px_rgba(30,20,10,0.03)]">
+      <div className="bg-[#121110] text-[#C5A059] py-1.5 px-4 text-center border-b border-[#252321] select-none">
+        <p className="tracking-[0.2em] text-[10px] font-semibold uppercase font-sans">
+          ATELIER DIGITAL IA · FOTOGRAFÍA EDITORIAL 2K · SHOPIFY & PRESTASHOP READY
+        </p>
+      </div>
+
+      {/* ======================================================== */}
+      {/* TOP NAVBAR HAUTE COUTURE / HIGH-FASHION EDITORIAL */}
+      {/* ======================================================== */}
+      <header className="border-b border-[#E8E2D9] glass-luxury sticky top-0 z-30 px-4 py-3 shadow-[0_4px_25px_-5px_rgba(18,17,16,0.03)]">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div
             onClick={() => setActiveTab('capture')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 text-[#EBDDC9] flex items-center justify-center shadow-sm border border-stone-800 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+            <div className="w-10 h-10 rounded-2xl bg-[#121110] text-[#C5A059] flex items-center justify-center shadow-md border border-[#2D2A26] group-hover:scale-105 transition-transform flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-[#C5A059]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold font-serif-couture tracking-[0.16em] uppercase text-stone-900">
-                  {settings.storeName || 'Alba Martín'}
+                <h1 className="text-xl sm:text-2xl font-serif-editorial tracking-[0.06em] uppercase text-[#121110] font-bold leading-none">
+                  {settings.storeName || 'ALBA MARTÍN'}
                 </h1>
-                {settings.simulationMode ? (
-                  <span className="text-[9px] uppercase font-mono font-semibold tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                    Modo Demo
-                  </span>
-                ) : (
-                  <span className="text-[9px] uppercase font-mono font-semibold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80">
-                    IA Alta Costura
-                  </span>
-                )}
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold tracking-wider uppercase bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse"></span>
+                  2K STUDIO ACTIVE
+                </span>
               </div>
-              <p className="text-[10px] tracking-wider uppercase text-stone-500 font-medium font-sans">
-                Boutique Virtual & Catálogo Lookbook
+              <p className="font-serif italic text-xs text-[#7A756D] mt-0.5">
+                Lookbook & Catálogo Inteligente
               </p>
             </div>
           </div>
@@ -162,16 +166,16 @@ export default function App() {
               onClick={() => setIsSettingsOpen(true)}
               className={`p-2.5 rounded-2xl border transition-all flex items-center gap-1.5 text-xs font-semibold ${
                 isReady
-                  ? 'bg-white/80 border-[#EBDDC9]/80 text-stone-700 hover:bg-white shadow-xs'
+                  ? 'bg-white border-[#E8E2D9] text-[#121110] hover:border-[#C5A059] shadow-xs'
                   : 'bg-amber-50 border-amber-300 text-amber-800 animate-pulse'
               }`}
               title="Ajustes de Demo"
               aria-label="Abrir ajustes de demo"
             >
-              <Settings className="w-3.5 h-3.5 text-stone-700" />
-              <span className="hidden sm:inline text-xs font-serif-couture uppercase tracking-wider">Ajustes</span>
+              <Settings className="w-3.5 h-3.5 text-[#121110]" />
+              <span className="hidden sm:inline text-xs font-serif-editorial uppercase tracking-wider">Ajustes</span>
               {isReady ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] ring-2 ring-[#E6D5B8]"></span>
               ) : (
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ring-2 ring-amber-200"></span>
               )}
@@ -181,31 +185,31 @@ export default function App() {
 
         {/* Tab Navigation Pill Bar - Luxury Segmented Control */}
         <div className="max-w-lg mx-auto mt-3">
-          <div className="bg-[#F0EAE1]/75 p-1 rounded-2xl border border-[#E5DAC8]/70 flex items-center gap-1">
+          <div className="bg-white/90 p-1 rounded-2xl border border-[#E8E2D9] shadow-xs flex items-center gap-1">
             <button
               type="button"
               onClick={() => setActiveTab('capture')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                 activeTab === 'capture'
-                  ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
+                  ? 'bg-[#121110] text-[#FAF7F2] shadow-sm font-medium'
+                  : 'text-[#7A756D] hover:text-[#121110] hover:bg-black/5'
               }`}
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Probador</span>
+              <Camera className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Estudio en Vivo</span>
             </button>
 
             {currentProduct && (
               <button
                 type="button"
                 onClick={() => setActiveTab('result')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                   activeTab === 'result'
-                    ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
+                    ? 'bg-[#121110] text-[#FAF7F2] shadow-sm font-medium'
+                    : 'text-[#7A756D] hover:text-[#121110] hover:bg-black/5'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
                 <span>Look Creado</span>
               </button>
             )}
@@ -213,14 +217,14 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('catalog')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                 activeTab === 'catalog'
-                  ? 'bg-[#1A1816] text-[#F5EFE6] shadow-[0_2px_10px_rgba(0,0,0,0.15)] ring-1 ring-white/10'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/40'
+                  ? 'bg-[#121110] text-[#FAF7F2] shadow-sm font-medium'
+                  : 'text-[#7A756D] hover:text-[#121110] hover:bg-black/5'
               }`}
             >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>Colección ({catalog.length})</span>
+              <ShoppingBag className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Lookbook & Catálogo ({catalog.length})</span>
             </button>
           </div>
         </div>

@@ -5,9 +5,9 @@ import {
   MessageCircle,
   ShoppingBag,
   ExternalLink,
-  Layers,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
 import { exportShopifyCSV, exportPrestaShopCSV } from '../utils/csvExporter';
@@ -32,44 +32,53 @@ export default function SavedCatalogTab({
   onClearAll,
   onGoToCapture,
 }: SavedCatalogTabProps) {
-  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   const handleExportShopify = () => {
     if (products.length === 0) return;
     exportShopifyCSV(products);
-    setDownloadSuccess('CSV Shopify descargado (con UTF-8 BOM)');
+    setDownloadSuccess('CSV Shopify descargado correctamente (UTF-8 con BOM)');
     setTimeout(() => setDownloadSuccess(null), 3000);
   };
 
   const handleExportPrestaShop = () => {
     if (products.length === 0) return;
     exportPrestaShopCSV(products);
-    setDownloadSuccess('CSV PrestaShop descargado (con UTF-8 BOM)');
+    setDownloadSuccess('CSV PrestaShop descargado correctamente (UTF-8 con BOM)');
     setTimeout(() => setDownloadSuccess(null), 3000);
   };
 
   const cleanPhone = storePhone.replace(/[^0-9]/g, '') || '34600000000';
 
+  // Calculate inventory total value
+  const totalValue = products.reduce((acc, curr) => acc + (curr.price || 0), 0);
+
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-300">
-      {/* Header and Exporters Bar */}
-      <div className="glass-card rounded-[28px] p-6 shadow-[0_10px_35px_-8px_rgba(30,25,20,0.04)] border border-[#E8DFC8]/80 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* ======================================================== */}
+      {/* PANEL EJECUTIVO OSCURO DE INVENTARIO & EXPORTACIÓN CSV */}
+      {/* ======================================================== */}
+      <section className="bg-[#121110] text-[#FAF7F2] rounded-3xl p-6 sm:p-7 border border-[#2D2A26] shadow-xl space-y-5">
+        <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-bold text-stone-900 text-base font-serif-couture tracking-wide flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-[#8C7654]" />
-              Catálogo Guardado ({products.length})
+            <span className="font-serif text-[10px] uppercase tracking-[0.25em] text-[#C5A059] font-bold block mb-1">
+              PANEL EJECUTIVO DE COLECCIÓN
+            </span>
+            <h2 className="text-xl sm:text-2xl font-serif text-[#FAF7F2] font-bold flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-[#C5A059]" />
+              Lookbook & Escaparate Digital
             </h2>
-            <p className="text-xs text-stone-500">
-              Colección preparada para exportación a tienda online
+            <p className="text-xs text-[#7A756D] mt-0.5">
+              Gestión editorial de prendas, valor de catálogo y sincronización e-commerce
             </p>
           </div>
+
           {products.length > 0 && (
             <button
               type="button"
               onClick={() => setShowConfirmClear(true)}
-              className="text-stone-400 hover:text-red-600 p-2.5 rounded-xl hover:bg-red-50/80 transition-colors"
+              className="text-[#7A756D] hover:text-red-400 p-2 rounded-xl hover:bg-white/5 transition-colors"
               title="Vaciar catálogo"
             >
               <Trash2 className="w-4 h-4" />
@@ -77,18 +86,18 @@ export default function SavedCatalogTab({
           )}
         </div>
 
-        {/* Confirmation Modal / Alert */}
+        {/* Confirmation Alert */}
         {showConfirmClear && (
-          <div className="p-3.5 bg-red-50/80 border border-red-200/80 rounded-2xl space-y-2 text-xs text-red-800">
-            <div className="flex items-center gap-1.5 font-bold">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              ¿Confirmas eliminar todas las prendas de la colección guardada?
+          <div className="p-4 bg-red-950/50 border border-red-800/80 rounded-2xl space-y-2.5 text-xs text-red-200 animate-in fade-in">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span>¿Confirmas eliminar todas las prendas de la colección guardada?</span>
             </div>
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setShowConfirmClear(false)}
-                className="px-3 py-1.5 rounded-xl bg-white border border-[#E5DAC8] text-stone-700 font-semibold"
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF7F2] font-medium"
               >
                 Cancelar
               </button>
@@ -98,7 +107,7 @@ export default function SavedCatalogTab({
                   onClearAll();
                   setShowConfirmClear(false);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-red-600 text-white font-semibold"
+                className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold"
               >
                 Eliminar todo
               </button>
@@ -106,71 +115,101 @@ export default function SavedCatalogTab({
           </div>
         )}
 
-        {/* Download Feedback */}
+        {/* Inventory Summary Metrics */}
+        <div className="grid grid-cols-3 gap-2.5 pt-1 border-t border-[#252321]">
+          <div className="bg-[#1C1A18] p-3 rounded-2xl border border-[#2D2A26]">
+            <span className="text-[10px] text-[#7A756D] uppercase tracking-wider block font-medium">
+              Prendas
+            </span>
+            <span className="text-lg sm:text-xl font-bold font-serif text-[#FAF7F2]">
+              {products.length}
+            </span>
+          </div>
+          <div className="bg-[#1C1A18] p-3 rounded-2xl border border-[#2D2A26]">
+            <span className="text-[10px] text-[#7A756D] uppercase tracking-wider block font-medium">
+              Valor Catálogo
+            </span>
+            <span className="text-lg sm:text-xl font-bold font-serif text-[#C5A059]">
+              {totalValue.toFixed(2)} €
+            </span>
+          </div>
+          <div className="bg-[#1C1A18] p-3 rounded-2xl border border-[#2D2A26]">
+            <span className="text-[10px] text-[#7A756D] uppercase tracking-wider block font-medium">
+              Fotografía
+            </span>
+            <span className="text-lg sm:text-xl font-bold font-serif text-emerald-400">
+              2K HD
+            </span>
+          </div>
+        </div>
+
+        {/* Download Success Notice */}
         {downloadSuccess && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            {downloadSuccess}
+          <div className="p-3 bg-emerald-950/60 border border-emerald-700/60 rounded-2xl text-xs font-semibold text-emerald-300 flex items-center gap-2 animate-in fade-in">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>{downloadSuccess}</span>
           </div>
         )}
 
-        {/* Export Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
+        {/* Professional CSV Export Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <button
             type="button"
             onClick={handleExportShopify}
             disabled={products.length === 0}
-            className={`py-3 px-3.5 rounded-2xl text-xs font-serif-couture tracking-wider font-semibold flex items-center justify-center gap-2 shadow-xs transition-all ${
+            className={`py-3.5 px-4 rounded-2xl text-xs font-serif tracking-wider font-semibold flex items-center justify-center gap-2.5 transition-all ${
               products.length > 0
-                ? 'bg-gradient-to-r from-[#1A1816] via-[#24211E] to-[#1A1816] text-[#F5EFE6] hover:bg-black active:scale-[0.99]'
-                : 'bg-[#FAF8F5] text-stone-400 cursor-not-allowed border border-[#EAE0D2]'
+                ? 'bg-white text-[#121110] hover:bg-[#FAF7F2] shadow-sm active:scale-[0.99] cursor-pointer'
+                : 'bg-white/10 text-stone-500 cursor-not-allowed border border-white/5'
             }`}
           >
-            <Download className="w-4 h-4 text-[#D4AF37]" />
-            Exportar Shopify (.CSV)
+            <Download className={`w-4 h-4 ${products.length > 0 ? 'text-[#C5A059]' : 'text-stone-500'}`} />
+            <span>Exportar CSV Shopify</span>
           </button>
 
           <button
             type="button"
             onClick={handleExportPrestaShop}
             disabled={products.length === 0}
-            className={`py-3 px-3.5 rounded-2xl text-xs font-serif-couture tracking-wider font-semibold flex items-center justify-center gap-2 shadow-xs transition-all ${
+            className={`py-3.5 px-4 rounded-2xl text-xs font-serif tracking-wider font-semibold flex items-center justify-center gap-2.5 transition-all ${
               products.length > 0
-                ? 'bg-gradient-to-r from-[#1A1816] via-[#24211E] to-[#1A1816] text-[#F5EFE6] hover:bg-black active:scale-[0.99]'
-                : 'bg-[#FAF8F5] text-stone-400 cursor-not-allowed border border-[#EAE0D2]'
+                ? 'bg-[#252321] text-[#FAF7F2] hover:bg-[#2F2C29] border border-[#3E3A35] shadow-sm active:scale-[0.99] cursor-pointer'
+                : 'bg-white/10 text-stone-500 cursor-not-allowed border border-white/5'
             }`}
           >
-            <Download className="w-4 h-4 text-[#A89884]" />
-            Exportar PrestaShop (.CSV)
+            <Download className={`w-4 h-4 ${products.length > 0 ? 'text-[#C5A059]' : 'text-stone-500'}`} />
+            <span>Exportar CSV PrestaShop</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Products List */}
+      {/* ======================================================== */}
+      {/* CUADRÍCULA DE MODA TIPO ZARA / MASSIMO DUTTI (2 COLUMNAS) */}
+      {/* ======================================================== */}
       {products.length === 0 ? (
-        <div className="glass-card rounded-[28px] p-10 text-center space-y-4 border border-[#E8DFC8]/80 shadow-[0_10px_35px_-8px_rgba(30,25,20,0.04)]">
-          <div className="w-16 h-16 rounded-3xl bg-[#FAF6F0] text-[#8C7654] border border-[#E5DAC8] flex items-center justify-center mx-auto shadow-xs">
+        <div className="bg-white rounded-3xl p-10 text-center space-y-4 border border-[#E8E2D9] shadow-sm">
+          <div className="w-16 h-16 rounded-3xl bg-[#FAF7F2] text-[#C5A059] border border-[#E8E2D9] flex items-center justify-center mx-auto shadow-xs">
             <ShoppingBag className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-stone-900 text-base font-serif-couture tracking-wide">
-              El catálogo está vacío
+            <h3 className="font-bold text-[#121110] text-lg font-serif">
+              El lookbook está vacío
             </h3>
-            <p className="text-xs text-stone-500 max-w-xs mx-auto">
-              Captura tu primera prenda en percha y pruébala en la modelo virtual para construir tu lookbook comercial.
+            <p className="text-xs text-[#7A756D] max-w-xs mx-auto">
+              Captura tu primera prenda en percha y pruébala en la modelo virtual para generar tu escaparate digital.
             </p>
           </div>
           <button
             type="button"
             onClick={onGoToCapture}
-            className="py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#1A1816] via-[#24211E] to-[#1A1816] text-[#F5EFE6] font-serif-couture tracking-wider font-semibold text-xs inline-flex items-center gap-2 hover:bg-black shadow-md transition-all active:scale-[0.99]"
+            className="py-3.5 px-6 rounded-2xl bg-[#121110] text-[#FAF7F2] font-serif tracking-wider font-semibold text-xs inline-flex items-center gap-2 hover:bg-black shadow-md transition-all active:scale-[0.99]"
           >
-            <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-            Probar una prenda ahora
+            <Sparkles className="w-4 h-4 text-[#C5A059]" />
+            <span>Probar una prenda ahora</span>
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3.5 sm:gap-6">
           {products.map((item) => {
             const firstSize = item.sizes[0] || 'M';
             const whatsappText = buildWhatsAppMessage(storeName, item.title, item.price, firstSize);
@@ -179,103 +218,93 @@ export default function SavedCatalogTab({
             return (
               <div
                 key={item.id}
-                className="glass-card rounded-[28px] p-5 shadow-[0_10px_35px_-8px_rgba(30,25,20,0.04)] border border-[#E8DFC8]/80 hover:border-[#D4AF37]/50 flex flex-col gap-3.5 transition-all"
+                className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-[#E8E2D9] shadow-sm hover:shadow-md hover:border-[#C5A059]/50 flex flex-col justify-between transition-all group"
               >
-                <div className="flex gap-4">
-                  {/* Thumbnail */}
+                <div>
+                  {/* Vertical 3:4 Photograph Frame */}
                   <div
                     onClick={() => onSelectProduct(item)}
-                    className="w-24 h-32 rounded-2xl overflow-hidden bg-stone-100 flex-shrink-0 cursor-pointer relative group border border-[#E5DAC8] shadow-xs"
+                    className="relative aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-stone-100 cursor-pointer border border-[#E8E2D9]"
                   >
                     <img
                       src={item.resultImageUrl || item.garmentPhotoBase64}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                      <ExternalLink className="w-4 h-4" />
+
+                    {/* Badge top-left */}
+                    <div className="absolute top-2 left-2 flex flex-col gap-1">
+                      {item.isOutfit && (
+                        <span className="text-[9px] uppercase tracking-wider bg-[#121110] text-[#FAF7F2] px-2 py-0.5 rounded font-mono font-bold">
+                          Total Look
+                        </span>
+                      )}
+                      <span className="text-[9px] uppercase tracking-wider bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded font-mono">
+                        {item.productCategory}
+                      </span>
+                    </div>
+
+                    {/* Floating Zoom / Open on hover */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="backdrop-blur-md bg-white/90 text-[#121110] px-3 py-1.5 rounded-xl text-xs font-serif font-semibold shadow-md flex items-center gap-1.5">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Ver Ficha</span>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 flex flex-col justify-between min-w-0">
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-[10px] font-mono uppercase font-bold text-[#8C7654] bg-[#FAF8F5] border border-[#E5DAC8] px-2 py-0.5 rounded">
-                          {item.skuPrefix}
-                        </span>
-                        <span className="text-base font-bold text-[#1A1816] font-serif-couture tracking-tight">
-                          {item.price.toFixed(2)} €
-                        </span>
-                      </div>
-
-                      <h4
-                        onClick={() => onSelectProduct(item)}
-                        className="font-bold text-stone-900 text-sm font-serif-fashion line-clamp-2 mt-1 hover:text-[#8C7654] cursor-pointer"
-                      >
-                        {item.title}
-                      </h4>
-
-                      <p className="text-[11px] font-mono text-stone-400 truncate">
-                        /{item.handle}
-                      </p>
+                  {/* Editorial Info */}
+                  <div className="pt-3 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-[#7A756D] font-mono">
+                      <span>{item.skuPrefix}</span>
+                      <span>{item.sizes.join(' · ')}</span>
                     </div>
 
-                    {/* Sizes and Category chips */}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      {item.isOutfit && (
-                        <span className="text-[9px] uppercase tracking-wider bg-[#1A1816] text-[#F5EFE6] px-2 py-0.5 rounded-full font-bold ring-1 ring-white/10">
-                          Conjunto 2 Piezas
-                        </span>
-                      )}
-                      <span className="text-[10px] bg-[#FAF8F5] text-stone-700 px-2.5 py-0.5 rounded-md font-medium flex items-center gap-1 border border-[#EDE4D5]">
-                        <Layers className="w-3 h-3 text-[#A89884]" />
-                        {item.productCategory}
-                      </span>
-                      <span className="text-[10px] bg-[#FAF8F5] text-stone-700 px-2.5 py-0.5 rounded-md font-mono border border-[#EDE4D5]">
-                        {item.sizes.join(', ')}
-                      </span>
-                      {item.backgroundType && item.backgroundType !== 'original' && (
-                        <span className="text-[10px] bg-[#FAF8F5] text-stone-700 px-2.5 py-0.5 rounded-md font-medium border border-[#EDE4D5]">
-                          {item.backgroundType === 'beach' && 'Fondo: Playa'}
-                          {item.backgroundType === 'studio' && 'Fondo: Estudio'}
-                          {item.backgroundType === 'urban' && 'Fondo: Urbano'}
-                          {item.backgroundType === 'garden' && 'Fondo: Jardín'}
-                          {item.backgroundType === 'custom' && 'Fondo: Personalizado'}
-                        </span>
-                      )}
-                    </div>
+                    <h4
+                      onClick={() => onSelectProduct(item)}
+                      className="font-serif font-semibold text-[#121110] text-sm sm:text-base line-clamp-2 leading-snug hover:text-[#C5A059] cursor-pointer transition-colors"
+                      title={item.title}
+                    >
+                      {item.title}
+                    </h4>
+
+                    <p className="font-serif font-bold text-base text-[#121110]">
+                      {item.price.toFixed(2)} €
+                    </p>
                   </div>
                 </div>
 
-                {/* Card Action Buttons */}
-                <div className="pt-3 border-t border-[#EDE4D5] flex items-center gap-2">
+                {/* Card Action Buttons: Quick WhatsApp Button */}
+                <div className="pt-3 border-t border-[#E8E2D9] mt-3 space-y-2">
                   <a
                     href={waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#1E7447] to-[#18623B] hover:from-[#18623B] hover:to-[#144F30] text-white text-xs font-serif-couture tracking-wider font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                    className="w-full py-2 px-3 rounded-xl bg-[#1E7447] hover:bg-[#18623B] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                   >
                     <MessageCircle className="w-3.5 h-3.5 fill-white stroke-none" />
-                    WhatsApp
+                    <span>WhatsApp</span>
                   </a>
 
-                  <button
-                    type="button"
-                    onClick={() => onSelectProduct(item)}
-                    className="py-2.5 px-3 rounded-xl border border-[#E5DAC8] bg-[#FAF8F5] hover:bg-[#F3ECE0] text-[#1A1816] text-xs font-serif-couture tracking-wider font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                  >
-                    Ver Ficha
-                  </button>
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onSelectProduct(item)}
+                      className="text-[11px] font-serif font-semibold text-[#121110] hover:text-[#C5A059] flex items-center gap-1"
+                    >
+                      <span>Detalles</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onDeleteProduct(item.id)}
-                    className="p-2.5 rounded-xl border border-[#E5DAC8] text-stone-400 hover:text-red-600 hover:bg-red-50/80 transition-colors"
-                    title="Eliminar de catálogo"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteProduct(item.id)}
+                      className="text-stone-400 hover:text-red-600 p-1 rounded-lg transition-colors"
+                      title="Eliminar prenda"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
