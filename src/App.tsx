@@ -70,6 +70,18 @@ export default function App() {
         garmentBase64Raw: payload.garmentImage.base64Raw,
         secondaryGarmentDataUri: payload.secondaryGarmentImage?.dataUri,
         secondaryGarmentBase64Raw: payload.secondaryGarmentImage?.base64Raw,
+        garmentPhotos:
+          payload.garmentPhotos && payload.garmentPhotos.length > 0
+            ? payload.garmentPhotos.map((p) => p.dataUri)
+            : payload.lookItems && payload.lookItems.length > 0
+            ? payload.lookItems.map((i) => i.dataUri)
+            : [payload.garmentImage.dataUri],
+        garmentPhotosRaw:
+          payload.garmentPhotos && payload.garmentPhotos.length > 0
+            ? payload.garmentPhotos.map((p) => p.base64Raw)
+            : payload.lookItems && payload.lookItems.length > 0
+            ? payload.lookItems.map((i) => i.base64Raw)
+            : [payload.garmentImage.base64Raw],
         isOutfit: payload.isOutfit,
         isLookCompleto: payload.isLookCompleto,
         lookItems: payload.lookItems,

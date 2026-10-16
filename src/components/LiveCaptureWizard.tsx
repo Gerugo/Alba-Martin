@@ -28,17 +28,24 @@ import {
   ModelMode,
   VirtualModelProfile,
   LookItem,
-  LookItemCategory,
-  GarmentCaptureMode
+  LookItemCategory
 } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
 import { TryOnStage } from '../services/aiService';
 
+export interface CurrentLookGarment {
+  id: string;
+  category: LookItemCategory;
+  label: string;
+  image: CompressedImageResult;
+}
+
 export interface ProcessPayload {
   modelImage?: CompressedImageResult | null;
   garmentImage: CompressedImageResult;
   secondaryGarmentImage?: CompressedImageResult | null;
+  garmentPhotos?: CompressedImageResult[];
   isOutfit: boolean;
   isLookCompleto?: boolean;
   lookItems?: LookItem[];
@@ -54,49 +61,6 @@ export interface ProcessPayload {
   virtualModel: VirtualModelProfile;
 }
 
-interface LookSlotConfig {
-  id: 'outerwear' | 'top' | 'bottom' | 'accessory';
-  category: LookItemCategory;
-  title: string;
-  subtitle: string;
-  badge: string;
-  defaultLabel: string;
-}
-
-const LOOK_SLOT_CONFIGS: LookSlotConfig[] = [
-  {
-    id: 'outerwear',
-    category: 'outerwear',
-    title: 'Prenda Exterior',
-    subtitle: 'Americana, blazer, abrigo, gabardina o cárdigan',
-    badge: 'Capa 1',
-    defaultLabel: 'Americana / Prenda exterior',
-  },
-  {
-    id: 'top',
-    category: 'top',
-    title: 'Prenda Superior',
-    subtitle: 'Camiseta básica, blusa, top lencero o camisa',
-    badge: 'Capa 2',
-    defaultLabel: 'Camiseta / Prenda superior',
-  },
-  {
-    id: 'bottom',
-    category: 'bottom',
-    title: 'Prenda Inferior',
-    subtitle: 'Pantalón de vestir, jeans rectos, falda midi o palazzo',
-    badge: 'Capa 3',
-    defaultLabel: 'Pantalón / Prenda inferior',
-  },
-  {
-    id: 'accessory',
-    category: 'accessory',
-    title: 'Accesorio o Complemento',
-    subtitle: 'Bolso de mano, cinturón de piel o calzado',
-    badge: 'Toque Final',
-    defaultLabel: 'Bolso / Accesorio',
-  },
-];
 
 interface LiveCaptureWizardProps {
   onProcess: (payload: ProcessPayload) => void;
@@ -213,29 +177,17 @@ export default function LiveCaptureWizard({
   const [hasSavedModelOnDisk, setHasSavedModelOnDisk] = useState<boolean>(false);
   const [isCompressingModel, setIsCompressingModel] = useState<boolean>(false);
 
-  // Garment & Outfit / Look Completo state
-  const [garmentMode, setGarmentMode] = useState<GarmentCaptureMode>('single');
-  const [isOutfit, setIsOutfit] = useState<boolean>(false);
-  const [garmentImage, setGarmentImage] = useState<CompressedImageResult | null>(null);
-  const [secondaryGarmentImage, setSecondaryGarmentImage] = useState<CompressedImageResult | null>(null);
-  const [lookSlots, setLookSlots] = useState<{
-    outerwear: CompressedImageResult | null;
-    top: CompressedImageResult | null;
-    bottom: CompressedImageResult | null;
-    accessory: CompressedImageResult | null;
-  }>({
-    outerwear: null,
-    top: null,
-    bottom: null,
-    accessory: null,
+  // Garment & Look state (Permite añadir múltiples elementos al look actual)
+  const [lookGarments, setLookGarments] = useState<CurrentLookGarment[]>([]);
+  const pendingGarmentConfigRef = useRef<{ category: LookItemCategory; label: string }>({
+    category: 'outerwear',
+    label: 'Prenda Principal',
   });
-  const [compressingSlotId, setCompressingSlotId] = useState<string | null>(null);
 
   const [category, setCategory] = useState<ProductCategory>('auto');
   const [price, setPrice] = useState<number>(29.95);
   const [sizes, setSizes] = useState<string[]>(['S', 'M', 'L']);
   const [isCompressingGarment, setIsCompressingGarment] = useState<boolean>(false);
-  const [isCompressingSecondary, setIsCompressingSecondary] = useState<boolean>(false);
 
   // Engine & Lighting Scene state
   const [engine, setEngine] = useState<TryOnEngine>('nano-banana-pro');
@@ -252,11 +204,6 @@ export default function LiveCaptureWizard({
   const modelGalleryInputRef = useRef<HTMLInputElement>(null);
   const garmentCameraInputRef = useRef<HTMLInputElement>(null);
   const garmentGalleryInputRef = useRef<HTMLInputElement>(null);
-  const secondaryCameraInputRef = useRef<HTMLInputElement>(null);
-  const secondaryGalleryInputRef = useRef<HTMLInputElement>(null);
-  const activeLookSlotRef = useRef<'outerwear' | 'top' | 'bottom' | 'accessory'>('outerwear');
-  const lookSlotCameraInputRef = useRef<HTMLInputElement>(null);
-  const lookSlotGalleryInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved model from storage on mount
   useEffect(() => {
@@ -311,7 +258,17 @@ export default function LiveCaptureWizard({
     }
   };
 
-  // Handle Garment Photo upload
+  const triggerAddGarmentCamera = (category: LookItemCategory, label: string) => {
+    pendingGarmentConfigRef.current = { category, label };
+    garmentCameraInputRef.current?.click();
+  };
+
+  const triggerAddGarmentGallery = (category: LookItemCategory, label: string) => {
+    pendingGarmentConfigRef.current = { category, label };
+    garmentGalleryInputRef.current?.click();
+  };
+
+  // Handle Garment Photo upload and addition to look
   const handleGarmentFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -320,7 +277,24 @@ export default function LiveCaptureWizard({
       setErrorMessage(null);
       setIsCompressingGarment(true);
       const compressed = await compressImage(file);
-      setGarmentImage(compressed);
+      const newItem: CurrentLookGarment = {
+        id: `garment_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        category: pendingGarmentConfigRef.current.category,
+        label: pendingGarmentConfigRef.current.label,
+        image: compressed,
+      };
+
+      setLookGarments((prev) => {
+        const next = [...prev, newItem];
+        if (next.length === 1 && (price === 29.95 || price === 59.95 || price === 89.95)) {
+          setPrice(29.95);
+        } else if (next.length === 2 && price === 29.95) {
+          setPrice(59.95);
+        } else if (next.length >= 3 && (price === 29.95 || price === 59.95)) {
+          setPrice(89.95);
+        }
+        return next;
+      });
     } catch (err) {
       console.error(err);
       setErrorMessage('No se pudo procesar la foto de la prenda. Prueba con otra imagen.');
@@ -330,66 +304,16 @@ export default function LiveCaptureWizard({
     }
   };
 
-  // Handle Secondary Garment Photo upload (for outfit bottom)
-  const handleSecondaryGarmentFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setErrorMessage(null);
-      setIsCompressingSecondary(true);
-      const compressed = await compressImage(file);
-      setSecondaryGarmentImage(compressed);
-    } catch (err) {
-      console.error(err);
-      setErrorMessage('No se pudo procesar la foto de la parte inferior. Prueba con otra imagen.');
-    } finally {
-      setIsCompressingSecondary(false);
-      e.target.value = '';
-    }
-  };
-
-  // Handle Look Completo slot upload
-  const handleSlotImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const slotId = activeLookSlotRef.current;
-    setCompressingSlotId(slotId);
-    setErrorMessage(null);
-
-    try {
-      const compressed = await compressImage(file);
-
-      setLookSlots((prev) => ({
-        ...prev,
-        [slotId]: compressed,
-      }));
-    } catch (err: unknown) {
-      console.error(`Error procesando prenda para slot ${slotId}:`, err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(`No se pudo procesar la imagen: ${msg}`);
-    } finally {
-      setCompressingSlotId(null);
-      if (e.target) e.target.value = '';
-    }
-  };
-
-  const triggerSlotCamera = (slotId: 'outerwear' | 'top' | 'bottom' | 'accessory') => {
-    activeLookSlotRef.current = slotId;
-    lookSlotCameraInputRef.current?.click();
-  };
-
-  const triggerSlotGallery = (slotId: 'outerwear' | 'top' | 'bottom' | 'accessory') => {
-    activeLookSlotRef.current = slotId;
-    lookSlotGalleryInputRef.current?.click();
-  };
-
-  const removeSlotImage = (slotId: 'outerwear' | 'top' | 'bottom' | 'accessory') => {
-    setLookSlots((prev) => ({
-      ...prev,
-      [slotId]: null,
-    }));
+  const handleRemoveLookGarment = (id: string) => {
+    setLookGarments((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      if (next.length === 1 && price === 59.95) {
+        setPrice(29.95);
+      } else if (next.length === 2 && price === 89.95) {
+        setPrice(59.95);
+      }
+      return next;
+    });
   };
 
   // Toggle size selection
@@ -431,73 +355,34 @@ export default function LiveCaptureWizard({
       return;
     }
 
-    if (garmentMode === 'look_completo') {
-      const activeItems: LookItem[] = [];
-      LOOK_SLOT_CONFIGS.forEach((cfg) => {
-        const itemImg = lookSlots[cfg.id];
-        if (itemImg) {
-          activeItems.push({
-            id: cfg.id,
-            category: cfg.category,
-            label: cfg.defaultLabel,
-            dataUri: itemImg.dataUri,
-            base64Raw: itemImg.base64Raw,
-            fileSizeBytes: itemImg.fileSizeBytes,
-          });
-        }
-      });
-
-      if (activeItems.length < 2) {
-        setErrorMessage('Para un Look Completo, añade al menos 2 piezas (ej. americana + camiseta o americana + pantalón).');
-        return;
-      }
-
-      setErrorMessage(null);
-      const firstCompressed = lookSlots[activeItems[0].id as keyof typeof lookSlots]!;
-      const secondCompressed = activeItems[1] ? lookSlots[activeItems[1].id as keyof typeof lookSlots] : null;
-
-      onProcess({
-        modelImage: modelMode === 'real' ? modelImage : null,
-        garmentImage: firstCompressed,
-        secondaryGarmentImage: secondCompressed,
-        isOutfit: true,
-        isLookCompleto: true,
-        lookItems: activeItems,
-        category: 'one-pieces',
-        price: Number(price) || 89.95,
-        sizes,
-        engine,
-        sceneStyle,
-        backgroundType: 'original',
-        customBackgroundImage: null,
-        modelMode,
-        editorialRepose,
-        virtualModel,
-      });
+    if (lookGarments.length === 0) {
+      setErrorMessage('Por favor, añade al menos una prenda al look actual para continuar (Paso 02).');
       return;
     }
 
-    if (!garmentImage) {
-      setErrorMessage(
-        isOutfit
-          ? 'Por favor, añade la foto de la parte superior (blusa, chaqueta, top).'
-          : 'Por favor, añade o haz la foto a la prenda en percha (Paso 02).'
-      );
-      return;
-    }
-    if (isOutfit && !secondaryGarmentImage) {
-      setErrorMessage('Por favor, añade la foto de la parte inferior del conjunto (pantalón, falda).');
-      return;
-    }
     setErrorMessage(null);
+
+    const primaryGarment = lookGarments[0].image;
+    const secondaryGarment = lookGarments[1]?.image || null;
+    const activeLookItems: LookItem[] = lookGarments.map((g) => ({
+      id: g.id,
+      category: g.category,
+      label: g.label,
+      dataUri: g.image.dataUri,
+      base64Raw: g.image.base64Raw,
+      fileSizeBytes: g.image.fileSizeBytes,
+    }));
+
     onProcess({
       modelImage: modelMode === 'real' ? modelImage : null,
-      garmentImage,
-      secondaryGarmentImage,
-      isOutfit,
-      isLookCompleto: false,
-      category: isOutfit ? 'one-pieces' : category,
-      price: Number(price) || (isOutfit ? 59.95 : 29.95),
+      garmentImage: primaryGarment,
+      secondaryGarmentImage: secondaryGarment,
+      garmentPhotos: lookGarments.map((g) => g.image),
+      isOutfit: lookGarments.length >= 2,
+      isLookCompleto: lookGarments.length >= 3,
+      lookItems: activeLookItems,
+      category: lookGarments.length > 1 ? 'one-pieces' : category,
+      price: Number(price) || (lookGarments.length >= 3 ? 89.95 : lookGarments.length === 2 ? 59.95 : 29.95),
       sizes,
       engine,
       sceneStyle,
@@ -509,14 +394,7 @@ export default function LiveCaptureWizard({
     });
   };
 
-  const lookItemCount = Object.values(lookSlots).filter(Boolean).length;
-  const isGarmentReady =
-    garmentMode === 'look_completo'
-      ? lookItemCount >= 2
-      : garmentMode === 'outfit'
-      ? Boolean(garmentImage && secondaryGarmentImage)
-      : Boolean(garmentImage);
-
+  const isGarmentReady = lookGarments.length > 0;
   const canSubmit = Boolean(
     (modelMode === 'virtual' || modelImage) &&
     isGarmentReady &&
@@ -574,36 +452,6 @@ export default function LiveCaptureWizard({
         accept="image/*"
         className="hidden"
         onChange={handleGarmentFileChange}
-      />
-      <input
-        ref={secondaryCameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleSecondaryGarmentFileChange}
-      />
-      <input
-        ref={secondaryGalleryInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleSecondaryGarmentFileChange}
-      />
-      <input
-        ref={lookSlotCameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleSlotImageUpload}
-      />
-      <input
-        ref={lookSlotGalleryInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleSlotImageUpload}
       />
 
       {/* ======================================================== */}
@@ -895,452 +743,217 @@ export default function LiveCaptureWizard({
         <div className="flex items-start justify-between">
           <div>
             <span className="font-serif text-xs uppercase tracking-[0.2em] text-[#C5A059] font-bold block mb-1">
-              02 / LA PRENDA & ESCENARIO
+              02 / LAS PRENDAS DEL LOOK & ESCENARIO
             </span>
             <h2 className="text-xl font-serif text-[#121110] font-bold flex items-center gap-2">
               <ShoppingBag className="w-4 h-4 text-[#7A756D]" />
-              {garmentMode === 'look_completo'
-                ? 'Look Completo (Estilo Botika)'
-                : garmentMode === 'outfit'
-                ? 'Prendas del Conjunto (Total Look)'
-                : 'Prenda en Percha & Escenario'}
+              Prendas del Look Actual
             </h2>
             <p className="text-xs text-[#7A756D] mt-0.5">
-              {garmentMode === 'look_completo'
-                ? 'Combina americana, camiseta, pantalón y accesorios para un estilismo integral'
-                : garmentMode === 'outfit'
-                ? 'Captura la pieza superior y la inferior para el estilismo coordinado'
-                : 'Fotografía en percha con fondo neutro y atmósfera editorial'}
+              Añade una o varias prendas y accesorios para componer el estilismo (estilo editorial Botika / Zara Studio)
             </p>
           </div>
-          {((garmentMode === 'look_completo' && lookItemCount >= 2) ||
-            (garmentMode === 'outfit' && garmentImage && secondaryGarmentImage) ||
-            (garmentMode === 'single' && garmentImage)) && (
+          {lookGarments.length > 0 && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#121110] bg-[#FAF7F2] px-3 py-1 rounded-full border border-[#C5A059]/40">
               <Check className="w-3.5 h-3.5 text-[#C5A059] stroke-[2.5]" />
-              {garmentMode === 'look_completo'
-                ? `${lookItemCount} piezas listas`
-                : garmentMode === 'outfit'
-                ? 'Conjunto listo'
-                : 'Lista'}
+              {lookGarments.length === 1
+                ? '1 prenda lista'
+                : lookGarments.length === 2
+                ? 'Conjunto (2 piezas)'
+                : `${lookGarments.length} piezas listas`}
             </span>
           )}
         </div>
 
-        {/* Modalidad: Prenda individual vs Conjunto 2 piezas vs Look Completo */}
-        <div className="bg-[#FAF7F2] p-1.5 rounded-2xl flex items-center gap-1 border border-[#E8E2D9]">
-          <button
-            type="button"
-            onClick={() => {
-              setGarmentMode('single');
-              setIsOutfit(false);
-              setCategory('auto');
-              if (price === 89.95 || price === 59.95) setPrice(29.95);
-            }}
-            className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all text-center ${
-              garmentMode === 'single'
-                ? 'bg-[#121110] text-[#FAF7F2] shadow-sm'
-                : 'text-[#7A756D] hover:text-[#121110]'
-            }`}
-          >
-            Prenda individual
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setGarmentMode('outfit');
-              setIsOutfit(true);
-              if (price === 29.95 || price === 89.95) setPrice(59.95);
-            }}
-            className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all text-center ${
-              garmentMode === 'outfit'
-                ? 'bg-[#121110] text-[#FAF7F2] shadow-sm'
-                : 'text-[#7A756D] hover:text-[#121110]'
-            }`}
-          >
-            Conjunto 2 Piezas
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setGarmentMode('look_completo');
-              setIsOutfit(true);
-              if (price === 29.95 || price === 59.95) setPrice(89.95);
-            }}
-            className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all text-center relative ${
-              garmentMode === 'look_completo'
-                ? 'bg-[#121110] text-[#FAF7F2] shadow-sm ring-1 ring-[#C5A059]/40'
-                : 'text-[#7A756D] hover:text-[#121110]'
-            }`}
-          >
-            <span className="flex items-center justify-center gap-1">
-              <span>Look Completo</span>
-              <span
-                className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full ${
-                  garmentMode === 'look_completo'
-                    ? 'bg-[#C5A059] text-[#121110]'
-                    : 'bg-[#E8E2D9] text-[#7A756D]'
-                }`}
-              >
-                Botika
+        {/* Miniaturas horizontales de todas las prendas que componen el look actual */}
+        {lookGarments.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-serif uppercase tracking-[0.15em] text-[#121110] font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                Piezas del Look ({lookGarments.length})
               </span>
-            </span>
-          </button>
-        </div>
-
-        {/* ======================================================== */}
-        {/* MODO A: LOOK COMPLETO (MULTI-PRENDA & ACCESORIOS) */}
-        {/* ======================================================== */}
-        {garmentMode === 'look_completo' && (
-          <div className="space-y-4 animate-in fade-in">
-            {/* Banner explicativo con estilo editorial */}
-            <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-4 text-xs text-[#7A756D] space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-serif text-[11px] uppercase tracking-[0.15em] text-[#C5A059] font-bold flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-                  Estilismo Integral Botika · Capas y Accesorios
-                </span>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white border border-[#E8E2D9] text-[#121110]">
-                  {lookItemCount} de 4 piezas
-                </span>
-              </div>
-              <p className="leading-relaxed text-[11px]">
-                Añade las prendas y accesorios que forman el look completo (ej. americana + camiseta + pantalón + bolso). La modelo lucirá todas las piezas coordinadas con caída natural y superposición de capas.
-              </p>
+              <span className="text-[10px] font-mono text-[#7A756D]">
+                Toca la cruz para quitar cualquier prenda
+              </span>
             </div>
 
-            {/* Grid de 4 slots modulares */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {LOOK_SLOT_CONFIGS.map((slot, index) => {
-                const img = lookSlots[slot.id];
-                const isComp = compressingSlotId === slot.id;
-
-                return (
-                  <div
-                    key={slot.id}
-                    className="p-4 bg-[#FAF7F2]/80 rounded-2xl border border-[#E8E2D9] flex flex-col justify-between space-y-3"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="w-4 h-4 rounded-full bg-[#121110] text-[#FAF7F2] text-[9px] flex items-center justify-center font-mono">
-                            {index + 1}
-                          </span>
-                          <span className="text-xs font-bold text-[#121110]">
-                            {slot.title}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-[#7A756D] leading-tight">
-                          {slot.subtitle}
-                        </p>
-                      </div>
-                      <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white text-[#7A756D] border border-[#E8E2D9]">
-                        {slot.badge}
-                      </span>
-                    </div>
-
-                    {img ? (
-                      <div className="space-y-2">
-                        <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-48 bg-white border border-[#E8E2D9] flex items-center justify-center">
-                          <img
-                            src={img.dataUri}
-                            alt={slot.title}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-2 left-2 backdrop-blur-md bg-[#121110]/80 text-[#FAF7F2] px-2 py-0.5 rounded-full text-[9px] font-mono">
-                            {formatBytes(img.fileSizeBytes)}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeSlotImage(slot.id)}
-                            className="absolute top-2 right-2 backdrop-blur-md bg-black/60 hover:bg-black text-[#FAF7F2] p-1 rounded-full transition-colors"
-                            title="Quitar prenda"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => triggerSlotCamera(slot.id)}
-                            className="flex-1 py-1.5 px-2.5 rounded-xl border border-[#E8E2D9] bg-white text-[11px] font-semibold text-[#121110] flex items-center justify-center gap-1 hover:border-[#121110]"
-                          >
-                            <RefreshCw className="w-3 h-3 text-[#7A756D]" />
-                            Repetir
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => triggerSlotGallery(slot.id)}
-                            className="py-1.5 px-2.5 rounded-xl border border-[#E8E2D9] bg-white text-[11px] font-semibold text-[#121110] flex items-center justify-center hover:border-[#121110]"
-                            title="Subir de galería"
-                          >
-                            <Upload className="w-3 h-3 text-[#7A756D]" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => triggerSlotCamera(slot.id)}
-                          disabled={isComp}
-                          className="w-full py-2.5 px-3 rounded-xl bg-[#121110] text-[#FAF7F2] font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-black transition-colors"
-                        >
-                          {isComp ? (
-                            <span className="flex items-center gap-1">
-                              <RefreshCw className="w-3 h-3 animate-spin text-[#C5A059]" />
-                              Procesando...
-                            </span>
-                          ) : (
-                            <>
-                              <Camera className="w-3.5 h-3.5 text-[#C5A059]" />
-                              Hacer foto
-                            </>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => triggerSlotGallery(slot.id)}
-                          disabled={isComp}
-                          className="w-full py-1.5 px-3 rounded-xl border border-[#E8E2D9] bg-white hover:border-[#121110] text-[#121110] font-medium text-[11px] flex items-center justify-center gap-1"
-                        >
-                          <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                          Galería
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* MODO B: CONJUNTO 2 PIEZAS (TOTAL LOOK) */}
-        {/* ======================================================== */}
-        {garmentMode === 'outfit' && (
-          <div className="space-y-4 animate-in fade-in">
-            {/* Pieza 1: Parte Superior */}
-            <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#121110] flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-[#121110] text-[#FAF7F2] text-[10px] flex items-center justify-center font-mono">1</span>
-                  Parte Superior (Blusa, Blazer, Top...)
-                </span>
-                {garmentImage && (
-                  <span className="text-[10px] font-semibold text-[#121110] bg-white px-2 py-0.5 rounded-full border border-[#C5A059]/40">
-                    Lista
-                  </span>
-                )}
-              </div>
-
-              {garmentImage ? (
-                <div className="space-y-2">
-                  <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-56 bg-white border border-[#E8E2D9] flex items-center justify-center">
-                    <img src={garmentImage.dataUri} alt="Parte superior" className="w-full h-full object-cover" />
-                    <div className="absolute top-2 left-2 backdrop-blur-md bg-[#121110]/80 text-[#FAF7F2] px-2 py-0.5 rounded-full text-[10px] font-mono">
-                      {formatBytes(garmentImage.fileSizeBytes)}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => garmentCameraInputRef.current?.click()}
-                      className="flex-1 py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white text-xs font-semibold text-[#121110] flex items-center justify-center gap-1.5 hover:border-[#121110]"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 text-[#7A756D]" />
-                      Repetir superior
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => garmentGalleryInputRef.current?.click()}
-                      className="py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white text-xs font-semibold text-[#121110] flex items-center justify-center gap-1.5 hover:border-[#121110]"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => garmentCameraInputRef.current?.click()}
-                    disabled={isCompressingGarment}
-                    className="w-full py-3 px-3 rounded-xl bg-[#121110] text-[#FAF7F2] font-semibold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-black"
-                  >
-                    {isCompressingGarment ? (
-                      <span className="flex items-center gap-1.5">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C5A059]" /> Procesando...
-                      </span>
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4 text-[#C5A059]" />
-                        Hacer foto a la parte superior
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => garmentGalleryInputRef.current?.click()}
-                    disabled={isCompressingGarment}
-                    className="w-full py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white hover:border-[#121110] text-[#121110] font-medium text-xs flex items-center justify-center gap-1.5"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                    Elegir superior de la galería
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Pieza 2: Parte Inferior */}
-            <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#121110] flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-[#121110] text-[#FAF7F2] text-[10px] flex items-center justify-center font-mono">2</span>
-                  Parte Inferior (Pantalón, Falda, Short...)
-                </span>
-                {secondaryGarmentImage && (
-                  <span className="text-[10px] font-semibold text-[#121110] bg-white px-2 py-0.5 rounded-full border border-[#C5A059]/40">
-                    Lista
-                  </span>
-                )}
-              </div>
-
-              {secondaryGarmentImage ? (
-                <div className="space-y-2">
-                  <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-56 bg-white border border-[#E8E2D9] flex items-center justify-center">
-                    <img src={secondaryGarmentImage.dataUri} alt="Parte inferior" className="w-full h-full object-cover" />
-                    <div className="absolute top-2 left-2 backdrop-blur-md bg-[#121110]/80 text-[#FAF7F2] px-2 py-0.5 rounded-full text-[10px] font-mono">
-                      {formatBytes(secondaryGarmentImage.fileSizeBytes)}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => secondaryCameraInputRef.current?.click()}
-                      className="flex-1 py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white text-xs font-semibold text-[#121110] flex items-center justify-center gap-1.5 hover:border-[#121110]"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 text-[#7A756D]" />
-                      Repetir inferior
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => secondaryGalleryInputRef.current?.click()}
-                      className="py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white text-xs font-semibold text-[#121110] flex items-center justify-center gap-1.5 hover:border-[#121110]"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => secondaryCameraInputRef.current?.click()}
-                    disabled={isCompressingSecondary}
-                    className="w-full py-3 px-3 rounded-xl bg-[#121110] text-[#FAF7F2] font-semibold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-black"
-                  >
-                    {isCompressingSecondary ? (
-                      <span className="flex items-center gap-1.5">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C5A059]" /> Procesando...
-                      </span>
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4 text-[#C5A059]" />
-                        Hacer foto a la parte inferior
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => secondaryGalleryInputRef.current?.click()}
-                    disabled={isCompressingSecondary}
-                    className="w-full py-2 px-3 rounded-xl border border-[#E8E2D9] bg-white hover:border-[#121110] text-[#121110] font-medium text-xs flex items-center justify-center gap-1.5"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                    Elegir inferior de la galería
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* MODO C: PRENDA INDIVIDUAL */}
-        {/* ======================================================== */}
-        {garmentMode === 'single' && (
-          <div className="space-y-4 animate-in fade-in">
-            {garmentImage ? (
-              <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-[#E8E2D9] shadow-sm space-y-2">
-                <div className="relative rounded-xl overflow-hidden aspect-[3/4] max-h-80 bg-stone-100 flex items-center justify-center">
-                  <img
-                    src={garmentImage.dataUri}
-                    alt="Prenda en percha"
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Floating 2K Resolution Tag */}
-                  <div className="absolute top-2.5 left-2.5 backdrop-blur-md bg-[#121110]/80 border border-[#C5A059]/40 text-[#FAF7F2] px-2.5 py-1 rounded-full text-[10px] font-mono font-medium flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059]"></span>
-                    <span>2K CAPTURA · {formatBytes(garmentImage.fileSizeBytes)}</span>
-                  </div>
-
-                  {/* Floating Frosted Glass Action Button */}
-                  <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => garmentCameraInputRef.current?.click()}
-                      className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 text-[#7A756D]" />
-                      <span>Cambiar foto</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => garmentGalleryInputRef.current?.click()}
-                      className="backdrop-blur-md bg-white/85 hover:bg-white text-[#121110] border border-white/60 shadow-md text-xs font-medium px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all"
-                      title="Elegir de galería"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => garmentCameraInputRef.current?.click()}
-                  disabled={isCompressingGarment}
-                  className="w-full py-4 px-4 rounded-2xl bg-[#121110] text-[#FAF7F2] font-semibold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] transition-all hover:bg-black"
+            <div className="flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1 scrollbar-thin">
+              {lookGarments.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="relative flex-shrink-0 w-28 sm:w-32 bg-white rounded-2xl border border-[#E8E2D9] overflow-hidden shadow-xs hover:border-[#C5A059] transition-all group"
                 >
-                  {isCompressingGarment ? (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-[#C5A059]" />
-                      Optimizando fotografía de la prenda...
+                  <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
+                    <img
+                      src={item.image.dataUri}
+                      alt={item.label}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute top-2 left-2 w-5 h-5 rounded-full bg-[#121110]/85 text-[#FAF7F2] text-[10px] flex items-center justify-center font-mono font-bold shadow-sm">
+                      {index + 1}
                     </span>
-                  ) : (
-                    <>
-                      <Camera className="w-4 h-4 text-[#C5A059]" />
-                      <span>Hacer foto a la prenda en percha</span>
-                    </>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLookGarment(item.id)}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-black text-[#FAF7F2] flex items-center justify-center shadow-md transition-colors"
+                      title="Eliminar del look"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="absolute bottom-2 left-2 text-[8px] font-mono font-medium backdrop-blur-md bg-black/70 text-[#FAF7F2] px-1.5 py-0.5 rounded border border-white/20">
+                      {formatBytes(item.image.fileSizeBytes)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 bg-[#FAF7F2] border-t border-[#E8E2D9]">
+                    <p className="text-[11px] font-bold text-[#121110] truncate" title={item.label}>
+                      {item.label}
+                    </p>
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-[#7A756D] block">
+                      {item.category === 'outerwear'
+                        ? 'Prenda Exterior'
+                        : item.category === 'top'
+                        ? 'Parte Superior'
+                        : item.category === 'bottom'
+                        ? 'Parte Inferior'
+                        : 'Accesorio'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FAF7F2]/60 text-center space-y-1">
+            <p className="text-xs font-semibold text-[#121110]">El look actual no tiene prendas añadidas</p>
+            <p className="text-[11px] text-[#7A756D]">
+              Utiliza las opciones inferiores para añadir la prenda principal, pantalón o falda, y accesorios.
+            </p>
+          </div>
+        )}
+
+        {/* Añadir múltiples elementos al look actual */}
+        <div className="space-y-2.5">
+          <label className="text-xs font-bold text-[#121110] uppercase tracking-wider flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-[#C5A059]" />
+            Añadir Elementos al Look
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* 1. Prenda Principal */}
+            <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-[#121110]">Prenda Principal</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white text-[#7A756D] border border-[#E8E2D9]">
+                    Capa 1
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#7A756D] leading-tight">
+                  Americana, blazer, vestido, blusa o top principal
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => triggerAddGarmentCamera('outerwear', 'Prenda Principal')}
+                  disabled={isCompressingGarment}
+                  className="flex-1 py-2 px-2 rounded-xl bg-[#121110] text-[#FAF7F2] text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-black transition-colors"
+                >
+                  <Camera className="w-3 h-3 text-[#C5A059]" />
+                  <span>Cámara</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => garmentGalleryInputRef.current?.click()}
+                  onClick={() => triggerAddGarmentGallery('outerwear', 'Prenda Principal')}
                   disabled={isCompressingGarment}
-                  className="w-full py-3 px-4 rounded-2xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-medium text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                  className="flex-1 py-2 px-2 rounded-xl border border-[#E8E2D9] bg-white text-[#121110] text-[11px] font-semibold flex items-center justify-center gap-1 hover:border-[#121110] transition-colors"
                 >
-                  <Upload className="w-3.5 h-3.5 text-[#7A756D]" />
-                  <span>Elegir fotografía de la galería</span>
+                  <Upload className="w-3 h-3 text-[#7A756D]" />
+                  <span>Galería</span>
                 </button>
               </div>
-            )}
+            </div>
+
+            {/* 2. Parte Inferior / Pantalón */}
+            <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-[#121110]">Parte Inferior / Pantalón</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white text-[#7A756D] border border-[#E8E2D9]">
+                    Capa 2
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#7A756D] leading-tight">
+                  Pantalón sastre, vaquero, falda o shorts
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => triggerAddGarmentCamera('bottom', 'Parte Inferior / Pantalón')}
+                  disabled={isCompressingGarment}
+                  className="flex-1 py-2 px-2 rounded-xl bg-[#121110] text-[#FAF7F2] text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-black transition-colors"
+                >
+                  <Camera className="w-3 h-3 text-[#C5A059]" />
+                  <span>Cámara</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerAddGarmentGallery('bottom', 'Parte Inferior / Pantalón')}
+                  disabled={isCompressingGarment}
+                  className="flex-1 py-2 px-2 rounded-xl border border-[#E8E2D9] bg-white text-[#121110] text-[11px] font-semibold flex items-center justify-center gap-1 hover:border-[#121110] transition-colors"
+                >
+                  <Upload className="w-3 h-3 text-[#7A756D]" />
+                  <span>Galería</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Accesorio / Bolso */}
+            <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E8E2D9] flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-[#121110]">Accesorio / Bolso</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white text-[#7A756D] border border-[#E8E2D9]">
+                    Toque Final
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#7A756D] leading-tight">
+                  Bolso, cinturón, calzado, pañuelo o joya
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => triggerAddGarmentCamera('accessory', 'Accesorio / Bolso')}
+                  disabled={isCompressingGarment}
+                  className="flex-1 py-2 px-2 rounded-xl bg-[#121110] text-[#FAF7F2] text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-black transition-colors"
+                >
+                  <Camera className="w-3 h-3 text-[#C5A059]" />
+                  <span>Cámara</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerAddGarmentGallery('accessory', 'Accesorio / Bolso')}
+                  disabled={isCompressingGarment}
+                  className="flex-1 py-2 px-2 rounded-xl border border-[#E8E2D9] bg-white text-[#121110] text-[11px] font-semibold flex items-center justify-center gap-1 hover:border-[#121110] transition-colors"
+                >
+                  <Upload className="w-3 h-3 text-[#7A756D]" />
+                  <span>Galería</span>
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+
+          {isCompressingGarment && (
+            <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#C5A059]/40 flex items-center justify-center gap-2 text-xs font-semibold text-[#121110] animate-pulse">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C5A059]" />
+              <span>Optimizando fotografía en resolución 2K...</span>
+            </div>
+          )}
+        </div>
 
         {/* SELECTOR DE MOTOR DE CALIDAD */}
         <div className="space-y-2.5 pt-4 border-t border-[#E8E2D9]">
@@ -1462,7 +1075,7 @@ export default function LiveCaptureWizard({
         </div>
 
         {/* Category selector */}
-        {!isOutfit && (
+        {lookGarments.length <= 1 && (
           <div className="space-y-2">
             <label className="text-xs font-semibold text-[#121110] flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-[#7A756D]" />
@@ -1496,7 +1109,7 @@ export default function LiveCaptureWizard({
           {/* Price */}
           <div>
             <label className="text-xs font-semibold text-[#121110] block mb-1">
-              {isOutfit ? 'Precio Total Look (€)' : 'Precio de Venta (€)'}
+              {lookGarments.length > 1 ? 'Precio Total Look (€)' : 'Precio de Venta (€)'}
             </label>
             <div className="relative max-w-xs">
               <input
@@ -1556,11 +1169,11 @@ export default function LiveCaptureWizard({
           >
             <Sparkles className={`w-5 h-5 ${canSubmit ? 'text-[#C5A059]' : 'text-stone-400'}`} />
             <span>
-              {garmentMode === 'look_completo'
-                ? `Vestir Look Completo (${lookItemCount} Piezas) + Crear Ficha`
-                : isOutfit
+              {lookGarments.length >= 3
+                ? `Vestir Look Completo (${lookGarments.length} Piezas) + Crear Ficha`
+                : lookGarments.length === 2
                 ? 'Vestir Conjunto 2 Piezas + Crear Ficha'
-                : 'Vestir Modelo + Crear Ficha'}
+                : 'Vestir Prenda + Crear Ficha'}
             </span>
           </button>
 
@@ -1568,18 +1181,8 @@ export default function LiveCaptureWizard({
             <p className="text-center text-[11px] text-[#7A756D] mt-2 font-medium">
               {modelMode === 'real' && !modelImage
                 ? 'Falta la foto de la modelo (Paso 01) o elige Supermodelo Virtual'
-                : garmentMode === 'look_completo'
-                ? lookItemCount < 2
-                  ? `Añade al menos 2 prendas o accesorios al look (${lookItemCount}/2 añadidas)`
-                  : 'Completa los datos requeridos'
-                : garmentMode === 'outfit'
-                ? !garmentImage
-                  ? 'Falta la foto de la parte superior (Paso 02)'
-                  : !secondaryGarmentImage
-                  ? 'Falta la foto de la parte inferior del conjunto'
-                  : 'Completa los datos requeridos'
-                : !garmentImage
-                ? 'Falta la foto de la prenda en percha (Paso 02)'
+                : lookGarments.length === 0
+                ? 'Añade al menos una prenda al look actual (Paso 02)'
                 : 'Completa los datos requeridos'}
             </p>
           )}
@@ -1625,35 +1228,25 @@ export default function LiveCaptureWizard({
               </div>
 
               {/* Garment / Look Thumbnail */}
-              {garmentMode === 'look_completo' ? (
+              {lookGarments.length > 1 ? (
                 <div className="w-24 sm:w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-[#C5A059]/50 shadow-2xl relative bg-black grid grid-cols-2 gap-0.5 p-0.5">
-                  {LOOK_SLOT_CONFIGS.map((slot) => {
-                    const item = lookSlots[slot.id];
-                    return item ? (
-                      <img
-                        key={slot.id}
-                        src={item.dataUri}
-                        alt={slot.title}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    ) : (
-                      <div
-                        key={slot.id}
-                        className="w-full h-full bg-[#252321] flex items-center justify-center text-[7px] text-[#7A756D] font-mono rounded"
-                      >
-                        {slot.badge}
-                      </div>
-                    );
-                  })}
+                  {lookGarments.slice(0, 4).map((item) => (
+                    <img
+                      key={item.id}
+                      src={item.image.dataUri}
+                      alt={item.label}
+                      className="w-full h-full object-cover rounded"
+                    />
+                  ))}
                   <span className="absolute bottom-1 left-1 right-1 text-[8px] bg-black/90 text-[#C5A059] rounded py-0.5 font-mono text-center">
-                    LOOK COMPLETO
+                    LOOK ({lookGarments.length} PIEZAS)
                   </span>
                 </div>
-              ) : garmentImage ? (
+              ) : lookGarments.length === 1 ? (
                 <div className="w-24 sm:w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-[#C5A059]/50 shadow-2xl relative bg-black">
-                  <img src={garmentImage.dataUri} alt="Prenda" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1 right-1 text-[9px] bg-black/80 text-white rounded py-0.5 font-mono">
-                    {isOutfit ? 'CONJUNTO' : 'PRENDA'}
+                  <img src={lookGarments[0].image.dataUri} alt="Prenda" className="w-full h-full object-cover" />
+                  <span className="absolute bottom-1 left-1 right-1 text-[9px] bg-black/80 text-white rounded py-0.5 font-mono text-center">
+                    PRENDA
                   </span>
                 </div>
               ) : (
