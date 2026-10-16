@@ -1,6 +1,8 @@
 export type ProductCategory = 'tops' | 'bottoms' | 'one-pieces' | 'auto';
 export type BackgroundType = 'original' | 'beach' | 'studio' | 'urban' | 'garden' | 'custom';
 export type GarmentCaptureMode = 'single' | 'outfit';
+export type TryOnEngine = 'nano-banana-pro' | 'flux-2-max' | 'fashn-v16';
+export type SceneStyle = 'boutique' | 'studio' | 'street' | 'original';
 
 export interface CatalogProduct {
   id: string;

@@ -1,5 +1,11 @@
 import { fal } from '@fal-ai/client';
-import { CatalogProduct, ProductCategory, BackgroundType } from '../types/catalog';
+import {
+  CatalogProduct,
+  ProductCategory,
+  BackgroundType,
+  TryOnEngine,
+  SceneStyle
+} from '../types/catalog';
 
 export type TryOnStage =
   | 'idle'
@@ -18,6 +24,8 @@ export interface TryOnParams {
   secondaryGarmentBase64Raw?: string;
   isOutfit?: boolean;
   category: ProductCategory;
+  engine?: TryOnEngine;
+  sceneStyle?: SceneStyle;
   backgroundType?: BackgroundType;
   customBackgroundBase64?: string;
   price: number;
@@ -39,13 +47,15 @@ export interface GeneratedMetadata {
 }
 
 /**
- * Executes Virtual Try-On using Fal.ai FASHN v1.5
+ * Executes Virtual Try-On using top-tier Fal.ai models (Nano Banana Pro 2K, FLUX.2 Max HD, FASHN v1.6)
  */
 export async function runVirtualTryOn(
   modelDataUri: string,
   garmentDataUri: string,
-  category: ProductCategory,
+  category: ProductCategory = 'auto',
   falKey: string,
+  engine: TryOnEngine = 'nano-banana-pro',
+  sceneStyle: SceneStyle = 'boutique',
   simulationMode = false
 ): Promise<string> {
   if (simulationMode) {
@@ -64,11 +74,68 @@ export async function runVirtualTryOn(
   try {
     fal.config({ credentials: falKey.trim() });
 
-    const result = await fal.subscribe('fal-ai/fashn/tryon/v1.5', {
+    const scenePrompts: Record<SceneStyle, string> = {
+      boutique:
+        'Place her inside a bright, elegant, high-end modern clothing boutique with soft natural daylight and a softly blurred warm interior background.',
+      studio:
+        'Place her in a professional fashion photography studio with a clean warm off-white editorial backdrop and soft commercial studio lighting.',
+      street:
+        'Place her outdoors on a bright sunlit charming Mediterranean street with soft natural golden daylight and shallow depth of field.',
+      original:
+        'Keep the original background environment from the first image, but enhance the lighting so it looks clean, natural, and well-balanced.',
+    };
+
+    const scenePrompt = scenePrompts[sceneStyle] || scenePrompts.boutique;
+
+    if (engine === 'nano-banana-pro') {
+      const result = await fal.subscribe('fal-ai/nano-banana-pro/edit', {
+        input: {
+          prompt: `Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions) is wearing the exact garment shown in the second image. Reproduce the exact fabric pattern, colors, collar, sleeves, and natural drape of the garment from the second image with hyper-realistic texture, removing any hanger or tag. Pair it with flattering complementary trousers or skirt if only a top/jacket is provided. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`,
+          image_urls: [modelDataUri, garmentDataUri],
+          resolution: '2K',
+          aspect_ratio: '3:4',
+          output_format: 'jpeg',
+          safety_tolerance: '5',
+        } as any,
+        logs: false,
+      });
+
+      const data = result.data as { images?: { url: string }[]; image?: { url: string } };
+      const generatedUrl = data?.images?.[0]?.url || data?.image?.url;
+
+      if (!generatedUrl) {
+        throw new Error('Fal.ai Nano Banana Pro no devolvió ninguna URL de imagen válida.');
+      }
+
+      return generatedUrl;
+    }
+
+    if (engine === 'flux-2-max') {
+      const result = await fal.subscribe('fal-ai/flux-2-max/edit', {
+        input: {
+          prompt: `Professional fashion photography of the exact woman from @image1 wearing the exact garment from @image2. Preserve 100% of the facial identity, smile, hair, and body proportions of @image1. Render the exact print, cut, sleeves, and fabric texture of @image2 naturally on her body without any hanger. ${scenePrompt} Ultra-sharp commercial photography.`,
+          image_urls: [modelDataUri, garmentDataUri],
+          aspect_ratio: '3:4',
+        } as any,
+        logs: false,
+      });
+
+      const data = result.data as { images?: { url: string }[]; image?: { url: string } };
+      const generatedUrl = data?.images?.[0]?.url || data?.image?.url;
+
+      if (!generatedUrl) {
+        throw new Error('Fal.ai FLUX.2 Max no devolvió ninguna URL de imagen válida.');
+      }
+
+      return generatedUrl;
+    }
+
+    // Default: fashn-v16
+    const result = await fal.subscribe('fal-ai/fashn/tryon/v1.6', {
       input: {
         model_image: modelDataUri,
         garment_image: garmentDataUri,
-        category: category === 'auto' ? undefined : category,
+        category: category || 'auto',
         mode: 'quality',
         garment_photo_type: 'auto',
         moderation_level: 'permissive',
@@ -81,14 +148,14 @@ export async function runVirtualTryOn(
     const generatedUrl = data?.images?.[0]?.url || data?.image?.url;
 
     if (!generatedUrl) {
-      throw new Error('Fal.ai no devolvió ninguna URL de imagen válida.');
+      throw new Error('Fal.ai FASHN v1.6 no devolvió ninguna URL de imagen válida.');
     }
 
     return generatedUrl;
   } catch (err: unknown) {
-    console.error('Error en Fal.ai Virtual Try-On:', err);
+    console.error(`Error en Fal.ai Virtual Try-On (${engine}):`, err);
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Fallo en Fal.ai Try-On: ${message}`);
+    throw new Error(`Fallo en Fal.ai Try-On (${engine}): ${message}`);
   }
 }
 
@@ -360,6 +427,8 @@ export async function executeLiveTryOnAndCatalog(
     secondaryGarmentBase64Raw,
     isOutfit,
     category,
+    engine = 'nano-banana-pro',
+    sceneStyle = 'boutique',
     price,
     sizes,
     storeName,
@@ -379,6 +448,8 @@ export async function executeLiveTryOnAndCatalog(
         garmentDataUri,
         'tops',
         falKey,
+        engine,
+        sceneStyle,
         simulationMode
       );
 
@@ -389,13 +460,23 @@ export async function executeLiveTryOnAndCatalog(
         secondaryGarmentDataUri,
         'bottoms',
         falKey,
+        engine,
+        sceneStyle,
         simulationMode
       );
 
       return fullOutfitUrl;
     } else {
       onStageChange?.('adjusting_garment');
-      return runVirtualTryOn(modelDataUri, garmentDataUri, category, falKey, simulationMode);
+      return runVirtualTryOn(
+        modelDataUri,
+        garmentDataUri,
+        category,
+        falKey,
+        engine,
+        sceneStyle,
+        simulationMode
+      );
     }
   })();
 

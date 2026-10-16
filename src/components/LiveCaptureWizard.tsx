@@ -13,10 +13,16 @@ import {
   BookmarkCheck,
   Trash2,
   AlertCircle,
-  Image as ImageIcon,
+  Sun,
   X
 } from 'lucide-react';
-import { ProductCategory, BackgroundType, CompressedImageResult } from '../types/catalog';
+import {
+  ProductCategory,
+  BackgroundType,
+  CompressedImageResult,
+  TryOnEngine,
+  SceneStyle
+} from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
 import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
 import { TryOnStage } from '../services/aiService';
@@ -29,6 +35,8 @@ export interface ProcessPayload {
   category: ProductCategory;
   price: number;
   sizes: string[];
+  engine: TryOnEngine;
+  sceneStyle: SceneStyle;
   backgroundType: BackgroundType;
   customBackgroundImage?: CompressedImageResult | null;
 }
@@ -48,13 +56,48 @@ const CATEGORY_OPTIONS: { id: ProductCategory; label: string }[] = [
   { id: 'one-pieces', label: 'Vestido / Cuerpo entero' },
 ];
 
-const BACKGROUND_OPTIONS: { id: BackgroundType; label: string; desc: string }[] = [
-  { id: 'original', label: 'Tienda original', desc: 'Conserva el fondo original de la modelo' },
-  { id: 'beach', label: 'Playa y verano', desc: 'Arena dorada, luz cálida de verano y mar suave' },
-  { id: 'studio', label: 'Estudio minimalista', desc: 'Fondo neutro pulcro de fotografía de moda' },
-  { id: 'urban', label: 'Calle / Terraza urbana', desc: 'Fachada elegante y terraza exterior con luz natural' },
-  { id: 'garden', label: 'Jardín mediterráneo', desc: 'Terraza vegetal, olivos y muro de piedra' },
-  { id: 'custom', label: 'Subir fondo propio', desc: 'Rincón de la tienda o foto propia de fondo' },
+const ENGINE_OPTIONS: { id: TryOnEngine; label: string; badge: string; desc: string }[] = [
+  {
+    id: 'nano-banana-pro',
+    label: 'Nano Banana Pro 2K (Calidad Editorial Estudio - Recomendado)',
+    badge: '2K Editorial',
+    desc: 'Máxima resolución y nitidez en estampados, rostro natural y caída hiperrealista.',
+  },
+  {
+    id: 'flux-2-max',
+    label: 'FLUX.2 Max HD (Fotografía Realista)',
+    badge: 'HD Realista',
+    desc: 'Textura fotográfica fotorrealista con iluminación comercial.',
+  },
+  {
+    id: 'fashn-v16',
+    label: 'FASHN v1.6 Quality (Solo cambio de prenda)',
+    badge: 'Clásico',
+    desc: 'Mapeo directo de prenda sobre la postura exacta de la modelo.',
+  },
+];
+
+const SCENE_STYLE_OPTIONS: { id: SceneStyle; label: string; desc: string }[] = [
+  {
+    id: 'boutique',
+    label: 'Boutique de Moda Luminosa (Desenfoque suave)',
+    desc: 'Interior moderno, luz natural diurna y fondo cálido ligeramente desenfocado.',
+  },
+  {
+    id: 'studio',
+    label: 'Estudio Fotográfico Editorial (Fondo neutro tipo Zara)',
+    desc: 'Ciclorama marfil neutro y luz suave de estudio comercial.',
+  },
+  {
+    id: 'street',
+    label: 'Exterior Luz Natural (Calle blanca andaluza soleada)',
+    desc: 'Ambiente exterior luminoso, luz dorada mediterránea y profundidad de campo.',
+  },
+  {
+    id: 'original',
+    label: 'Mantener el fondo original de la foto mejorando la luz',
+    desc: 'Conserva el entorno original de la modelo con iluminación optimizada.',
+  },
 ];
 
 export default function LiveCaptureWizard({
@@ -78,10 +121,9 @@ export default function LiveCaptureWizard({
   const [isCompressingGarment, setIsCompressingGarment] = useState<boolean>(false);
   const [isCompressingSecondary, setIsCompressingSecondary] = useState<boolean>(false);
 
-  // Background selector state
-  const [backgroundType, setBackgroundType] = useState<BackgroundType>('original');
-  const [customBgImage, setCustomBgImage] = useState<CompressedImageResult | null>(null);
-  const [isCompressingBg, setIsCompressingBg] = useState<boolean>(false);
+  // Engine & Lighting Scene state
+  const [engine, setEngine] = useState<TryOnEngine>('nano-banana-pro');
+  const [sceneStyle, setSceneStyle] = useState<SceneStyle>('boutique');
 
   // Error alert
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -93,8 +135,6 @@ export default function LiveCaptureWizard({
   const garmentGalleryInputRef = useRef<HTMLInputElement>(null);
   const secondaryCameraInputRef = useRef<HTMLInputElement>(null);
   const secondaryGalleryInputRef = useRef<HTMLInputElement>(null);
-  const customBgCameraInputRef = useRef<HTMLInputElement>(null);
-  const customBgGalleryInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved model from storage on mount
   useEffect(() => {
@@ -210,27 +250,6 @@ export default function LiveCaptureWizard({
     setModelImage(null);
   };
 
-  // Handle custom background change
-  const handleCustomBgChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setErrorMessage(null);
-      setIsCompressingBg(true);
-      const compressed = await compressImage(file);
-      setCustomBgImage(compressed);
-    } catch (err) {
-      console.error(err);
-      setErrorMessage('No se pudo procesar la foto de fondo. Prueba con otra imagen.');
-    } finally {
-      setIsCompressingBg(false);
-      if (customBgCameraInputRef.current) customBgCameraInputRef.current.value = '';
-      if (customBgGalleryInputRef.current) customBgGalleryInputRef.current.value = '';
-    }
-  };
-
-  // Handle action submission
   const handleAction = () => {
     if (!modelImage) {
       setErrorMessage('Por favor, añade o haz la foto a la modelo (Paso 1).');
@@ -257,8 +276,10 @@ export default function LiveCaptureWizard({
       category: isOutfit ? 'one-pieces' : category,
       price: Number(price) || (isOutfit ? 59.95 : 29.95),
       sizes,
-      backgroundType,
-      customBackgroundImage: customBgImage,
+      engine,
+      sceneStyle,
+      backgroundType: 'original',
+      customBackgroundImage: null,
     });
   };
 
@@ -857,136 +878,106 @@ export default function LiveCaptureWizard({
           </div>
         </div>
 
-        {/* Selector de Fondo / Ambiente de la foto */}
-        <div className="space-y-3 pt-3 border-t border-stone-100">
+        {/* ======================================================== */}
+        {/* SELECTOR DE MOTOR DE CALIDAD IA */}
+        {/* ======================================================== */}
+        <div className="space-y-2.5 pt-3 border-t border-stone-100">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-              <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
-              Escenario / Fondo de la foto
+            <label className="text-xs font-semibold text-stone-800 flex items-center gap-1.5 font-serif-couture tracking-wide text-sm">
+              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+              Motor de Calidad IA
             </label>
-            {backgroundType !== 'original' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setBackgroundType('original');
-                  setCustomBgImage(null);
-                }}
-                className="text-[11px] text-stone-500 hover:text-stone-800 underline"
-              >
-                Restablecer a tienda
-              </button>
-            )}
+            <span className="text-[10px] font-mono text-[#8C7654] bg-[#FAF8F5] border border-[#E5DAC8] px-2 py-0.5 rounded-full">
+              {engine === 'nano-banana-pro' ? 'Resolución 2K' : engine === 'flux-2-max' ? 'Resolución HD' : 'Estándar'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {BACKGROUND_OPTIONS.map((bg) => {
-              const active = backgroundType === bg.id;
+          <div className="space-y-2">
+            {ENGINE_OPTIONS.map((opt) => {
+              const active = engine === opt.id;
               return (
                 <button
-                  key={bg.id}
+                  key={opt.id}
                   type="button"
-                  onClick={() => setBackgroundType(bg.id)}
-                  className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
+                  onClick={() => setEngine(opt.id)}
+                  className={`w-full p-3.5 rounded-2xl text-left border transition-all flex flex-col gap-1 ${
                     active
-                      ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
-                      : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                      ? 'bg-[#1A1816] text-[#F5EFE6] border-[#1A1816] shadow-sm ring-1 ring-white/10'
+                      : 'bg-white/80 text-stone-700 border-[#E8DFC8]/90 hover:bg-[#FAF8F5] hover:border-[#D4AF37]/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <span className="text-xs font-bold truncate">{bg.label}</span>
-                    {active && <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 ml-1" />}
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold font-serif-couture tracking-wide">
+                      {opt.label}
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      <span
+                        className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                          active
+                            ? 'bg-[#D4AF37] text-stone-950 font-semibold'
+                            : 'bg-stone-100 text-stone-600'
+                        }`}
+                      >
+                        {opt.badge}
+                      </span>
+                      {active && <Check className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                    </div>
                   </div>
-                  <p className={`text-[10px] leading-tight line-clamp-2 ${active ? 'text-stone-300' : 'text-stone-500'}`}>
-                    {bg.desc}
+                  <p
+                    className={`text-[11px] leading-relaxed ${
+                      active ? 'text-stone-300' : 'text-stone-500'
+                    }`}
+                  >
+                    {opt.desc}
                   </p>
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Upload card if custom background chosen */}
-          {backgroundType === 'custom' && (
-            <div className="mt-2.5 p-3 bg-stone-50 rounded-2xl border border-dashed border-stone-300">
-              <input
-                ref={customBgCameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleCustomBgChange}
-                className="hidden"
-              />
-              <input
-                ref={customBgGalleryInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCustomBgChange}
-                className="hidden"
-              />
+        {/* ======================================================== */}
+        {/* SELECTOR DE ILUMINACIÓN Y ESCENARIO DEL CATÁLOGO */}
+        {/* ======================================================== */}
+        <div className="space-y-2.5 pt-3 border-t border-stone-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-stone-800 flex items-center gap-1.5 font-serif-couture tracking-wide text-sm">
+              <Sun className="w-4 h-4 text-[#D4AF37]" />
+              Iluminación y Escenario del Catálogo
+            </label>
+          </div>
 
-              {customBgImage ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={customBgImage.dataUri}
-                    alt="Fondo personalizado"
-                    className="w-16 h-16 rounded-xl object-cover border border-stone-200 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-stone-900 truncate">Fondo propio cargado</p>
-                    <p className="text-[10px] text-stone-500">
-                      {customBgImage.width}x{customBgImage.height} px · {formatBytes(customBgImage.fileSizeBytes)}
-                    </p>
-                    <div className="flex gap-2.5 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => customBgGalleryInputRef.current?.click()}
-                        className="text-[11px] font-semibold text-stone-800 underline"
-                      >
-                        Cambiar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCustomBgImage(null)}
-                        className="text-[11px] font-semibold text-red-600 hover:text-red-700"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {SCENE_STYLE_OPTIONS.map((scn) => {
+              const active = sceneStyle === scn.id;
+              return (
+                <button
+                  key={scn.id}
+                  type="button"
+                  onClick={() => setSceneStyle(scn.id)}
+                  className={`p-3 rounded-2xl text-left border transition-all flex flex-col justify-between ${
+                    active
+                      ? 'bg-[#1A1816] text-[#F5EFE6] border-[#1A1816] shadow-sm ring-1 ring-white/10'
+                      : 'bg-white/80 text-stone-700 border-[#E8DFC8]/90 hover:bg-[#FAF8F5] hover:border-[#D4AF37]/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-xs font-bold font-serif-couture tracking-wide">
+                      {scn.label}
+                    </span>
+                    {active && <Check className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0 ml-1" />}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-2">
-                  <p className="text-xs font-semibold text-stone-800 mb-2">
-                    Sube una foto de un rincón de la tienda o un fondo especial
+                  <p
+                    className={`text-[10px] leading-tight ${
+                      active ? 'text-stone-300' : 'text-stone-500'
+                    }`}
+                  >
+                    {scn.desc}
                   </p>
-                  <div className="flex gap-2 justify-center">
-                    <button
-                      type="button"
-                      onClick={() => customBgCameraInputRef.current?.click()}
-                      disabled={isCompressingBg}
-                      className="px-3 py-1.5 bg-stone-900 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                      Hacer foto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => customBgGalleryInputRef.current?.click()}
-                      disabled={isCompressingBg}
-                      className="px-3 py-1.5 bg-white border border-stone-300 text-stone-700 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:bg-stone-50"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-stone-500" />
-                      Galería
-                    </button>
-                  </div>
-                  {isCompressingBg && (
-                    <p className="text-[10px] text-stone-500 mt-2 flex items-center justify-center gap-1">
-                      <RefreshCw className="w-3 h-3 animate-spin" /> Procesando foto de fondo...
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 

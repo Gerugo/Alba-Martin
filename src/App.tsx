@@ -66,6 +66,8 @@ export default function App() {
         secondaryGarmentBase64Raw: payload.secondaryGarmentImage?.base64Raw,
         isOutfit: payload.isOutfit,
         category: payload.category,
+        engine: payload.engine,
+        sceneStyle: payload.sceneStyle,
         backgroundType: payload.backgroundType,
         customBackgroundBase64: payload.customBackgroundImage?.dataUri,
         price: payload.price,
