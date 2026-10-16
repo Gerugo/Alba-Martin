@@ -72,7 +72,7 @@ export default function App() {
         customBackgroundBase64: payload.customBackgroundImage?.dataUri,
         price: payload.price,
         sizes: payload.sizes,
-        storeName: settings.storeName || 'Boutique Rota',
+        storeName: settings.storeName || 'ALBA MARTÍN',
         falKey: settings.falKey,
         geminiKey: settings.geminiKey,
         geminiModel: settings.geminiModel,
@@ -119,7 +119,7 @@ export default function App() {
 
   const hasFalKey = Boolean(settings.falKey);
   const hasGeminiKey = Boolean(settings.geminiKey);
-  const isReady = (hasFalKey && hasGeminiKey) || settings.simulationMode;
+  const isReady = hasFalKey && hasGeminiKey;
 
   return (
     <div className="min-h-screen luxury-silk-bg text-[#121110] flex flex-col selection:bg-[#121110] selection:text-[#FAF7F2]">
@@ -236,7 +236,7 @@ export default function App() {
           <div className="max-w-lg mx-auto flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-              Configura tus API Keys o activa el modo simulación para la demo.
+              Configura tus claves de API (Ropa y Texto) en Ajustes.
             </span>
             <button
               onClick={() => setIsSettingsOpen(true)}

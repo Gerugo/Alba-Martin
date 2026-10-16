@@ -7,7 +7,8 @@ import {
   ExternalLink,
   Sparkles,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  Instagram
 } from 'lucide-react';
 import { CatalogProduct } from '../types/catalog';
 import { exportShopifyCSV, exportPrestaShopCSV } from '../utils/csvExporter';
@@ -72,6 +73,15 @@ export default function SavedCatalogTab({
             <p className="text-xs text-[#7A756D] mt-0.5">
               Gestión editorial de prendas, valor de catálogo y sincronización e-commerce
             </p>
+            <a
+              href="https://www.instagram.com/alba_martinmodas/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-[#C5A059] hover:underline mt-1.5 font-medium"
+            >
+              <Instagram className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>@alba_martinmodas</span>
+            </a>
           </div>
 
           {products.length > 0 && (

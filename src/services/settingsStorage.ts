@@ -7,7 +7,7 @@ export function getDefaultSettings(): DemoSettings {
   return {
     falKey: import.meta.env.VITE_FAL_KEY || '',
     geminiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
-    storeName: 'Boutique Rota',
+    storeName: 'ALBA MARTÍN',
     storePhone: '34600000000',
     simulationMode: false,
     geminiModel: 'gemini-3.6-flash',
@@ -22,7 +22,7 @@ export function loadSettings(): DemoSettings {
     return {
       falKey: parsed.falKey || import.meta.env.VITE_FAL_KEY || '',
       geminiKey: parsed.geminiKey || import.meta.env.VITE_GEMINI_API_KEY || '',
-      storeName: parsed.storeName || 'Boutique Rota',
+      storeName: parsed.storeName || 'ALBA MARTÍN',
       storePhone: parsed.storePhone || '34600000000',
       simulationMode: Boolean(parsed.simulationMode),
       geminiModel: parsed.geminiModel || 'gemini-3.6-flash',

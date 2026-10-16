@@ -377,14 +377,25 @@ export default function ResultShowcase({
         {/* Instagram Post Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#E8E2D9]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#121110] text-[#C5A059] flex items-center justify-center font-serif font-bold text-sm border border-[#C5A059]/40 shadow-xs">
+            <a
+              href="https://www.instagram.com/alba_martinmodas/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-full bg-[#121110] text-[#C5A059] flex items-center justify-center font-serif font-bold text-sm border border-[#C5A059]/40 shadow-xs hover:scale-105 transition-transform"
+              title="Abrir perfil @alba_martinmodas"
+            >
               AM
-            </div>
+            </a>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs text-[#121110]">
-                  {storeName.toLowerCase().replace(/\s+/g, '')}.boutique
-                </span>
+                <a
+                  href="https://www.instagram.com/alba_martinmodas/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-xs text-[#121110] hover:text-[#C5A059] transition-colors"
+                >
+                  @alba_martinmodas
+                </a>
                 <span className="w-1 h-1 rounded-full bg-[#C5A059]"></span>
                 <span className="text-[10px] text-[#C5A059] font-medium">Siguiendo</span>
               </div>
@@ -394,9 +405,15 @@ export default function ResultShowcase({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-stone-400">
-            <Instagram className="w-4 h-4 text-[#7A756D]" />
-          </div>
+          <a
+            href="https://www.instagram.com/alba_martinmodas/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[#7A756D] hover:text-[#121110] p-1.5 rounded-xl hover:bg-[#FAF7F2] transition-colors"
+            title="Abrir Instagram @alba_martinmodas"
+          >
+            <Instagram className="w-4 h-4 text-[#C5A059]" />
+          </a>
         </div>
 
         {/* Post Caption (Editable) */}
