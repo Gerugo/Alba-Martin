@@ -67,19 +67,19 @@ const CATEGORY_OPTIONS: { id: ProductCategory; label: string }[] = [
 const ENGINE_OPTIONS: { id: TryOnEngine; label: string; badge: string; desc: string }[] = [
   {
     id: 'nano-banana-pro',
-    label: 'Nano Banana Pro 2K (Calidad Editorial Estudio - Recomendado)',
+    label: 'Calidad Editorial 2K (Recomendado)',
     badge: '2K Editorial',
     desc: 'Máxima resolución y nitidez en estampados, rostro natural y caída hiperrealista.',
   },
   {
     id: 'flux-2-max',
-    label: 'FLUX.2 Max HD (Fotografía Realista)',
+    label: 'Fotografía Realista HD',
     badge: 'HD Realista',
-    desc: 'Textura fotográfica fotorrealista con iluminación comercial.',
+    desc: 'Textura fotográfica con iluminación comercial.',
   },
   {
     id: 'fashn-v16',
-    label: 'FASHN v1.6 Quality (Solo cambio de prenda)',
+    label: 'Ajuste Directo de Prenda',
     badge: 'Clásico',
     desc: 'Mapeo directo de prenda sobre la postura exacta de la modelo.',
   },
@@ -517,8 +517,8 @@ export default function LiveCaptureWizard({
 
               <p className="text-[11px] text-[#7A756D] leading-relaxed">
                 {editorialRepose
-                  ? 'La IA mantiene el 100% de la cara, identidad y peinado de la mujer de la foto, pero cambia su postura rígida por una pose dinámica de modelo profesional de moda (ligero giro de 3/4, una mano en el bolsillo o tocando sutilmente la solapa, porte estilizado de campaña de Zara/Massimo Dutti, iluminación de revista y retoque comercial).'
-                  : 'Mantiene la postura original estática de la fotografía.'}
+                  ? 'Pose dinámica de modelo profesional con porte estilizado, giro de 3/4 e iluminación editorial.'
+                  : 'Conserva la postura original de la fotografía.'}
               </p>
             </div>
 
@@ -658,7 +658,7 @@ export default function LiveCaptureWizard({
             <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-3.5 text-xs text-[#7A756D] flex items-start gap-2.5">
               <Sparkles className="w-4 h-4 text-[#C5A059] flex-shrink-0 mt-0.5" />
               <p className="leading-snug text-[11px]">
-                <strong className="text-[#121110]">Sin fotos de personas:</strong> La IA vestirá a la supermodelo virtual seleccionada directamente con tu prenda en percha, creando una campaña editorial de pasarela.
+                <strong className="text-[#121110]">Sin fotos de personas:</strong> Viste a la supermodelo virtual seleccionada directamente con tu prenda en percha, creando una campaña editorial de pasarela.
               </p>
             </div>
 
@@ -988,12 +988,12 @@ export default function LiveCaptureWizard({
           </>
         )}
 
-        {/* SELECTOR DE MOTOR DE CALIDAD IA */}
+        {/* SELECTOR DE MOTOR DE CALIDAD */}
         <div className="space-y-2.5 pt-4 border-t border-[#E8E2D9]">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-[#121110] uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-              Motor de Calidad IA
+              Motor de Calidad
             </label>
             <span className="text-[10px] font-mono text-[#C5A059] bg-[#FAF7F2] border border-[#C5A059]/30 px-2 py-0.5 rounded-full font-semibold">
               {engine === 'nano-banana-pro' ? 'Resolución 2K' : engine === 'flux-2-max' ? 'Resolución HD' : 'Estándar'}
