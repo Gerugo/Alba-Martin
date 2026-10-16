@@ -78,7 +78,7 @@ export function exportShopifyCSV(products: CatalogProduct[], filename?: string):
         isFirstVariant ? escapeCsvCell(product.descriptionHtml) : '',
         escapeCsvCell(product.vendor),
         escapeCsvCell(product.productCategory),
-        escapeCsvCell('Ropa'),
+        escapeCsvCell(product.isLookCompleto ? 'Look Completo' : product.isOutfit ? 'Conjunto' : 'Prenda'),
         isFirstVariant ? escapeCsvCell(product.tags.join(', ')) : '',
         'TRUE',
         'Talla',
@@ -128,11 +128,13 @@ export function exportPrestaShopCSV(products: CatalogProduct[], filename?: strin
       ? product.descriptionHtml.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
       : product.title;
 
+    const categoryName = product.isLookCompleto ? 'Look Completo' : product.isOutfit ? 'Conjuntos' : product.productCategory;
+
     const rowValues = [
       String(idx + 1),
       '1', // Activo
       escapeCsvCell(product.title, delimiter),
-      escapeCsvCell(`Inicio, ${product.productCategory}`, delimiter),
+      escapeCsvCell(`Inicio, ${categoryName}`, delimiter),
       product.price.toFixed(2),
       escapeCsvCell(product.skuPrefix, delimiter),
       escapeCsvCell(textSummary, delimiter),

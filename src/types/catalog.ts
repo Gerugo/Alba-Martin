@@ -1,6 +1,17 @@
 export type ProductCategory = 'tops' | 'bottoms' | 'one-pieces' | 'auto';
 export type BackgroundType = 'original' | 'beach' | 'studio' | 'urban' | 'garden' | 'custom';
-export type GarmentCaptureMode = 'single' | 'outfit';
+export type GarmentCaptureMode = 'single' | 'outfit' | 'look_completo';
+export type LookItemCategory = 'outerwear' | 'top' | 'bottom' | 'accessory';
+
+export interface LookItem {
+  id: string;
+  category: LookItemCategory;
+  label: string;
+  dataUri: string;
+  base64Raw: string;
+  fileSizeBytes?: number;
+}
+
 export type TryOnEngine = 'nano-banana-pro' | 'flux-2-max' | 'fashn-v16';
 export type SceneStyle = 'boutique' | 'studio' | 'street' | 'original';
 export type ModelMode = 'real' | 'virtual';
@@ -25,6 +36,8 @@ export interface CatalogProduct {
   instagramCaption: string;
   backgroundType?: BackgroundType;
   isOutfit?: boolean;
+  isLookCompleto?: boolean;
+  lookItems?: LookItem[];
   modelMode?: ModelMode;
   editorialRepose?: boolean;
   virtualModel?: VirtualModelProfile;

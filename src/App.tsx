@@ -55,7 +55,13 @@ export default function App() {
   const handleStartProcess = async (payload: ProcessPayload) => {
     setExecutionError(null);
     setIsProcessing(true);
-    setProcessingStage(payload.isOutfit ? 'adjusting_garment_top' : 'adjusting_garment');
+    setProcessingStage(
+      payload.isLookCompleto
+        ? 'adjusting_look_completo'
+        : payload.isOutfit
+        ? 'adjusting_garment_top'
+        : 'adjusting_garment'
+    );
 
     try {
       const product = await executeLiveTryOnAndCatalog({
@@ -65,6 +71,8 @@ export default function App() {
         secondaryGarmentDataUri: payload.secondaryGarmentImage?.dataUri,
         secondaryGarmentBase64Raw: payload.secondaryGarmentImage?.base64Raw,
         isOutfit: payload.isOutfit,
+        isLookCompleto: payload.isLookCompleto,
+        lookItems: payload.lookItems,
         category: payload.category,
         engine: payload.engine,
         sceneStyle: payload.sceneStyle,

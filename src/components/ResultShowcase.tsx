@@ -359,6 +359,50 @@ export default function ResultShowcase({
           </div>
         )}
 
+        {/* PIEZAS Y ACCESORIOS QUE COMPONEN EL LOOK COMPLETO */}
+        {product.isLookCompleto && product.lookItems && product.lookItems.length > 0 && (
+          <div className="bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-serif text-xs uppercase tracking-[0.15em] text-[#C5A059] font-bold flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#C5A059]" />
+                Piezas del Look Completo ({product.lookItems.length})
+              </span>
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white border border-[#C5A059]/40 text-[#121110]">
+                Estilismo Botika
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {product.lookItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white p-2 rounded-xl border border-[#E8E2D9] flex flex-col items-center text-center space-y-1.5 shadow-xs"
+                >
+                  <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-[#E8E2D9]">
+                    <img
+                      src={item.dataUri}
+                      alt={item.label}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#121110] line-clamp-1">
+                    {item.label}
+                  </span>
+                  <span className="text-[9px] font-mono uppercase text-[#7A756D] bg-[#FAF7F2] px-1.5 py-0.5 rounded-md">
+                    {item.category === 'outerwear'
+                      ? 'Exterior'
+                      : item.category === 'top'
+                      ? 'Superior'
+                      : item.category === 'bottom'
+                      ? 'Inferior'
+                      : 'Accesorio'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Download Button */}
         <button
           type="button"

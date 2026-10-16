@@ -244,11 +244,15 @@ export default function SavedCatalogTab({
 
                     {/* Badge top-left */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
-                      {item.isOutfit && (
+                      {item.isLookCompleto ? (
+                        <span className="text-[9px] uppercase tracking-wider bg-[#121110] text-[#C5A059] border border-[#C5A059]/40 px-2 py-0.5 rounded font-mono font-bold">
+                          Look Completo
+                        </span>
+                      ) : item.isOutfit ? (
                         <span className="text-[9px] uppercase tracking-wider bg-[#121110] text-[#FAF7F2] px-2 py-0.5 rounded font-mono font-bold">
                           Total Look
                         </span>
-                      )}
+                      ) : null}
                       <span className="text-[9px] uppercase tracking-wider bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded font-mono">
                         {item.productCategory}
                       </span>
