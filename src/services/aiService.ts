@@ -73,11 +73,38 @@ export interface VirtualTryOnResult {
   allUrls: string[];
 }
 
-export const SHOT_DIRECTIVES = [
-  'SHOT 1 (HERO FULL OUTFIT SHOT): Medium-long three-quarter body framing from knees up. Confident front-facing editorial posture with subtle hip shift, showcasing the full silhouette and styling of the outfit.',
-  'SHOT 2 (DYNAMIC ANGLE & MOTION): Candid editorial walking shot captured from a 45-degree side-angle perspective. The model is in natural mid-stride motion looking subtly over her shoulder toward the camera, highlighting the side profile, sleeve cut, and dynamic movement/drape of the fabric.',
-  'SHOT 3 (CLOSE-UP DETAIL & TEXTURE ZOOM): Tight waist-up / chest-up close-up portrait (85mm macro fashion lens, shallow depth of field). Zoom in on the upper garment details, collar, lapels, stitching, print sharpness, and fabric weave while keeping the model\'s warm expression in frame.',
+export interface ShotConfig {
+  id: string;
+  label: string;
+  filename: string;
+  directive: string;
+}
+
+export const SHOT_CONFIGS: ShotConfig[] = [
+  {
+    id: 'shot-1',
+    label: '01 / PORTADA LOOKBOOK',
+    filename: 'look-1-portada.jpg',
+    directive:
+      '[EDITORIAL HERO SHOT 1 OF 3 - STATUESQUE FRONT LOOKBOOK]: Full-outfit vertical lookbook portrait. Statuesque, confident front-facing fashion model stance with a subtle hip shift, relaxed asymmetric shoulders, and lookbook hero presence. Direct magnetic eye contact with the camera, one hand resting naturally near the garment or in pocket, showcasing the clean silhouette and complete styling from head to toe. Soft commercial beauty lighting.',
+  },
+  {
+    id: 'shot-2',
+    label: '02 / MOVIMIENTO & PERFIL',
+    filename: 'look-2-movimiento.jpg',
+    directive:
+      '[EDITORIAL HIGH-IMPACT MOTION SHOT 2 OF 3 - CANDID STRIDE & DRAMATIC PROFILE]: HIGH-ENERGY CANDID MOTION PHOTOGRAPHY (RADICALLY DIFFERENT FROM A STATIC FRONT POSE). The model is captured in a dynamic candid walking motion, captured mid-stride stepping forward diagonally at a 45-to-60 degree side-profile angle. Her body is in full motion with fluid walking energy, one leg stepping forward, with the garments catching the air with natural movement, dynamic folds, and flowing drape. Her head turns elegantly looking back over her shoulder toward the camera with an effortless, chic smile. Cinematic directional side rim-lighting creating dramatic depth, dimension, and high-impact fashion runway energy.',
+  },
+  {
+    id: 'shot-3',
+    label: '03 / ZOOM DETALLE TEJIDO',
+    filename: 'look-3-zoom-detalle.jpg',
+    directive:
+      '[EDITORIAL DETAIL SHOT 3 OF 3 - MACRO TEXTURE & PORTRAIT ZOOM]: Tight chest-up intimate fashion portrait and macro garment inspection. Shot with an 85mm macro lens at f/1.4 with extreme shallow depth of field and soft creamy bokeh. Ultra-sharp macro focus zoomed in tight on the upper garment details: neckline, collar lapels, buttons, seam stitching, and tactile fabric weave, framed by the model\'s warm, radiant, and luminous facial expression.',
+  },
 ];
+
+export const SHOT_DIRECTIVES = SHOT_CONFIGS.map((s) => s.directive);
 
 /**
  * Executes Virtual Try-On using top-tier Fal.ai models (Nano Banana Pro 2K, FLUX.2 Max HD, FASHN v1.6)
@@ -144,12 +171,12 @@ export async function runVirtualTryOn(
     if (activeEngine === 'nano-banana-pro') {
       const getPrompt = (directive: string) => {
         if (isVirtual) {
-          return `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous editorial campaign portrait of ${virtualDesc}. ${directive} Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 85mm f/1.4 lens, 2K resolution.`;
+          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous editorial campaign portrait featuring ${virtualDesc}. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
         }
         if (editorialRepose) {
-          return `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from the first image. ${directive} Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 85mm f/1.4 lens, 2K resolution.`;
+          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from the first image. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
         }
-        return `Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions, maintaining her exact original pose). ${directive} Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`;
+        return `${directive} Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions). Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`;
       };
 
       const urls = await Promise.all(
@@ -182,12 +209,12 @@ export async function runVirtualTryOn(
     if (activeEngine === 'flux-2-max') {
       const getFluxPrompt = (directive: string) => {
         if (isVirtual) {
-          return `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous portrait of ${virtualDesc}. ${directive} Dress her naturally with ALL garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
+          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous portrait featuring ${virtualDesc}. Dress her naturally with ALL garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
         }
         if (editorialRepose) {
-          return `High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from @image1. ${directive} Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
+          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from @image1. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
         }
-        return `Professional fashion photography of the exact woman from @image1. Preserve 100% of facial features, hair, and body proportions. ${directive} Dress her naturally with ALL garments, clothing pieces, and accessories provided in the subsequent reference images without any hangers. ${scenePrompt} Ultra-sharp commercial photography.`;
+        return `${directive} Professional fashion photography of the exact woman from @image1. Preserve 100% of facial features, hair, and body proportions. Dress her naturally with ALL garments, clothing pieces, and accessories provided in the subsequent reference images without any hangers. ${scenePrompt} Ultra-sharp commercial photography.`;
       };
 
       const urls = await Promise.all(

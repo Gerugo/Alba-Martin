@@ -188,6 +188,23 @@ export default function LiveCaptureWizard({
 
   const [category, setCategory] = useState<ProductCategory>('auto');
   const [price, setPrice] = useState<number>(29.95);
+  const [priceInput, setPriceInput] = useState<string>('29,95');
+
+  const parsePrice = (val: string): number => {
+    const cleaned = val.replace(',', '.').replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const handlePriceChange = (val: string) => {
+    // Permitir dígitos y como máximo una coma o un punto decimal
+    if (/^[0-9]*[.,]?[0-9]*$/.test(val)) {
+      setPriceInput(val);
+      const parsed = parsePrice(val);
+      setPrice(parsed);
+    }
+  };
+
   const [sizes, setSizes] = useState<string[]>(['S', 'M', 'L']);
   const [isCompressingGarment, setIsCompressingGarment] = useState<boolean>(false);
 
@@ -289,12 +306,16 @@ export default function LiveCaptureWizard({
 
       setLookGarments((prev) => {
         const next = [...prev, newItem];
-        if (next.length === 1 && (price === 29.95 || price === 59.95 || price === 89.95)) {
+        const currentNum = parsePrice(priceInput);
+        if (next.length === 1 && (currentNum === 29.95 || currentNum === 59.95 || currentNum === 89.95)) {
           setPrice(29.95);
-        } else if (next.length === 2 && price === 29.95) {
+          setPriceInput('29,95');
+        } else if (next.length === 2 && currentNum === 29.95) {
           setPrice(59.95);
-        } else if (next.length >= 3 && (price === 29.95 || price === 59.95)) {
+          setPriceInput('59,95');
+        } else if (next.length >= 3 && (currentNum === 29.95 || currentNum === 59.95)) {
           setPrice(89.95);
+          setPriceInput('89,95');
         }
         return next;
       });
@@ -310,10 +331,13 @@ export default function LiveCaptureWizard({
   const handleRemoveLookGarment = (id: string) => {
     setLookGarments((prev) => {
       const next = prev.filter((item) => item.id !== id);
-      if (next.length === 1 && price === 59.95) {
+      const currentNum = parsePrice(priceInput);
+      if (next.length === 1 && currentNum === 59.95) {
         setPrice(29.95);
-      } else if (next.length === 2 && price === 89.95) {
+        setPriceInput('29,95');
+      } else if (next.length === 2 && currentNum === 89.95) {
         setPrice(59.95);
+        setPriceInput('59,95');
       }
       return next;
     });
@@ -385,7 +409,7 @@ export default function LiveCaptureWizard({
       isLookCompleto: lookGarments.length >= 3,
       lookItems: activeLookItems,
       category: lookGarments.length > 1 ? 'one-pieces' : category,
-      price: Number(price) || (lookGarments.length >= 3 ? 89.95 : lookGarments.length === 2 ? 59.95 : 29.95),
+      price: parsePrice(priceInput) || Number(price) || (lookGarments.length >= 3 ? 89.95 : lookGarments.length === 2 ? 59.95 : 29.95),
       sizes,
       engine,
       sceneStyle,
@@ -1117,11 +1141,18 @@ export default function LiveCaptureWizard({
             </label>
             <div className="relative max-w-xs">
               <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={priceInput}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                onBlur={() => {
+                  const num = parsePrice(priceInput);
+                  if (num > 0) {
+                    setPrice(num);
+                    setPriceInput(num.toFixed(2).replace('.', ','));
+                  }
+                }}
+                placeholder="19,90"
                 className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-[#E8E2D9] text-sm font-bold text-[#121110] bg-[#FAF7F2] focus:bg-white focus:border-[#121110] focus:ring-1 focus:ring-[#121110] outline-none transition-all"
               />
               <Euro className="w-4 h-4 text-[#7A756D] absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -1215,7 +1246,7 @@ export default function LiveCaptureWizard({
                     Pack 3 Fotos · Carrusel E-commerce & IG
                   </p>
                   <p className={`text-xs leading-relaxed ${shotPackMode === 'pack-3' ? 'text-stone-300' : 'text-[#7A756D]'}`}>
-                    1. Plano General + 2. Ángulo en Movimiento + 3. Zoom Detalle de Tejido · Se generan a la vez en paralelo
+                    1. Portada Lookbook + 2. Movimiento Dinámico + 3. Zoom Detalle Tejido · Se generan a la vez en paralelo
                   </p>
                 </div>
               </button>

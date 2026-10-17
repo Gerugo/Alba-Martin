@@ -34,13 +34,13 @@ type ComparisonMode = 'slider' | 'after' | 'before' | 'side-by-side';
 
 const SHOT_LABELS = [
   '01 / PORTADA LOOKBOOK',
-  '02 / ÁNGULO EN MOVIMIENTO',
+  '02 / MOVIMIENTO & PERFIL',
   '03 / ZOOM DETALLE TEJIDO',
 ];
 
 const SHOT_FILENAMES = [
   'look-1-portada.jpg',
-  'look-2-angulo.jpg',
+  'look-2-movimiento.jpg',
   'look-3-zoom-detalle.jpg',
 ];
 
@@ -439,7 +439,7 @@ export default function ResultShowcase({
               {resultImages.map((imgUrl, idx) => {
                 const isActive = activePhotoIndex === idx;
                 const shotTitles = ['01 / Portada', '02 / Movimiento', '03 / Zoom'];
-                const shotSubtitles = ['Plano General', 'Ángulo Dinámico', 'Detalle Tejido'];
+                const shotSubtitles = ['Plano General', 'Movimiento & Perfil', 'Detalle Tejido'];
 
                 return (
                   <button
