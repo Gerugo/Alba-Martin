@@ -36,7 +36,7 @@ import {
   ShotPackMode
 } from '../types/catalog';
 import { compressImage, formatBytes } from '../utils/imageCompressor';
-import { loadSavedModel, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
+import { loadSavedModel, loadSavedModelAsync, saveModelToStorage, removeSavedModel } from '../services/settingsStorage';
 import { TryOnStage } from '../services/aiService';
 
 export interface CurrentLookGarment {
@@ -233,19 +233,29 @@ export default function LiveCaptureWizard({
   const garmentCameraInputRef = useRef<HTMLInputElement>(null);
   const garmentGalleryInputRef = useRef<HTMLInputElement>(null);
 
-  // Load saved model from storage on mount
+  // Load saved model from storage on mount (synchronous cache + IndexedDB)
   useEffect(() => {
-    const saved = loadSavedModel();
-    if (saved) {
-      setHasSavedModelOnDisk(true);
-      setModelImage({
-        dataUri: saved.dataUri,
-        base64Raw: saved.dataUri.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, ''),
-        mimeType: 'image/jpeg',
-        fileSizeBytes: saved.fileSizeBytes || 180000,
-        originalSizeBytes: saved.fileSizeBytes || 180000,
-        width: 1280,
-        height: 1920,
+    const applySavedModel = (saved: { dataUri: string; fileSizeBytes: number } | null) => {
+      if (saved) {
+        setHasSavedModelOnDisk(true);
+        setModelImage({
+          dataUri: saved.dataUri,
+          base64Raw: saved.dataUri.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, ''),
+          mimeType: 'image/jpeg',
+          fileSizeBytes: saved.fileSizeBytes || 180000,
+          originalSizeBytes: saved.fileSizeBytes || 180000,
+          width: 1280,
+          height: 1920,
+        });
+      }
+    };
+
+    const immediate = loadSavedModel();
+    if (immediate) {
+      applySavedModel(immediate);
+    } else {
+      loadSavedModelAsync().then((fromDB) => {
+        if (fromDB) applySavedModel(fromDB);
       });
     }
   }, []);

@@ -14,6 +14,7 @@ import SettingsModal from './components/SettingsModal';
 import { loadSettings, saveSettings } from './services/settingsStorage';
 import {
   loadCatalog,
+  loadCatalogAsync,
   addProductToCatalog,
   deleteProductFromCatalog,
   clearCatalog,
@@ -39,9 +40,12 @@ export default function App() {
   const [processingStage, setProcessingStage] = useState<TryOnStage>('idle');
   const [executionError, setExecutionError] = useState<string | null>(null);
 
-  // Load catalog on mount
+  // Load catalog on mount (synchronous cache + full IndexedDB load)
   useEffect(() => {
     setCatalog(loadCatalog());
+    loadCatalogAsync().then((items) => {
+      setCatalog(items);
+    });
   }, []);
 
   // Save settings handler
@@ -106,8 +110,8 @@ export default function App() {
 
       setProcessingStage('completed');
 
-      // Add to catalog in storage
-      const updatedList = addProductToCatalog(product);
+      // Add to catalog in storage (IndexedDB)
+      const updatedList = await addProductToCatalog(product);
       setCatalog(updatedList);
       setCurrentProduct(product);
 
@@ -126,8 +130,8 @@ export default function App() {
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
-    const updated = deleteProductFromCatalog(id);
+  const handleDeleteProduct = async (id: string) => {
+    const updated = await deleteProductFromCatalog(id);
     setCatalog(updated);
     if (currentProduct?.id === id) {
       setCurrentProduct(null);
@@ -135,8 +139,8 @@ export default function App() {
     }
   };
 
-  const handleClearCatalog = () => {
-    clearCatalog();
+  const handleClearCatalog = async () => {
+    await clearCatalog();
     setCatalog([]);
     setCurrentProduct(null);
   };
