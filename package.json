@@ -6,10 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "dev:free": "npm --prefix botika-free run dev",
-    "build:free": "npm --prefix botika-free run build",
-    "tunnel:free": "npx localtunnel --port 5174"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@fal-ai/client": "^1.2.3",
