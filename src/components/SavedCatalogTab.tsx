@@ -34,6 +34,7 @@ export default function SavedCatalogTab({
   onGoToCapture,
 }: SavedCatalogTabProps) {
   const [showConfirmClear, setShowConfirmClear] = useState<boolean>(false);
+  const [productToDelete, setProductToDelete] = useState<CatalogProduct | null>(null);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   const handleExportShopify = () => {
@@ -331,8 +332,11 @@ export default function SavedCatalogTab({
 
                     <button
                       type="button"
-                      onClick={() => onDeleteProduct(item.id)}
-                      className="text-stone-400 hover:text-red-600 p-1 rounded-lg transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProductToDelete(item);
+                      }}
+                      className="text-stone-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                       title="Eliminar prenda"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -342,6 +346,58 @@ export default function SavedCatalogTab({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar prenda individual */}
+      {productToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          className="fixed inset-0 z-50 bg-[#121110]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setProductToDelete(null)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 max-w-sm w-full border border-[#E8E2D9] shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100 shadow-xs">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 id="delete-dialog-title" className="font-serif font-bold text-lg text-[#121110]">
+                ¿Eliminar esta prenda?
+              </h3>
+              <p className="text-xs font-semibold text-[#121110] line-clamp-1">
+                {productToDelete.title} · {productToDelete.price.toFixed(2)} €
+              </p>
+              <p className="text-[11px] text-[#7A756D] leading-relaxed">
+                La fotografía y los datos se borrarán del lookbook. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setProductToDelete(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-white text-[#121110] font-semibold text-xs transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteProduct(productToDelete.id);
+                  setProductToDelete(null);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-sm transition-colors"
+              >
+                Aceptar y eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
