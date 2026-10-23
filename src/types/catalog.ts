@@ -44,6 +44,7 @@ export interface CatalogProduct {
   lookItems?: LookItem[];
   modelMode?: ModelMode;
   editorialRepose?: boolean;
+  preserveFaceIdentity?: boolean;
   virtualModel?: VirtualModelProfile;
 }
 

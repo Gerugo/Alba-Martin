@@ -17,6 +17,7 @@ export type TryOnStage =
   | 'adjusting_garment_top'
   | 'adjusting_garment_bottom'
   | 'adjusting_look_completo'
+  | 'locking_face_identity'
   | 'generating_copy'
   | 'replacing_background'
   | 'completed';
@@ -47,6 +48,7 @@ export interface TryOnParams {
   simulationMode?: boolean;
   modelMode?: ModelMode;
   editorialRepose?: boolean;
+  preserveFaceIdentity?: boolean;
   virtualModel?: VirtualModelProfile;
   onStageChange?: (stage: TryOnStage) => void;
 }
@@ -59,13 +61,19 @@ export interface GeneratedMetadata {
   instagramCaption: string;
 }
 
+export const VIRTUAL_MODEL_SEEDS: Record<VirtualModelProfile, number> = {
+  mediterranean: 10427,
+  'nordic-studio': 20853,
+  'andalusian-chic': 30919,
+};
+
 export const VIRTUAL_MODEL_DESCRIPTIONS: Record<VirtualModelProfile, string> = {
   mediterranean:
-    'Sofia, a gorgeous 30-year-old Spanish fashion model with sun-kissed luminous olive skin, natural shoulder-length wavy brunette hair, warm honey eyes, and Massimo Dutti editorial lookbook elegance',
+    'Sofia, a consistent 30-year-old Spanish fashion model with sun-kissed luminous olive skin, distinct warm amber-honey almond-shaped eyes, natural shoulder-length wavy dark chestnut-brunette hair parted slightly off-center, sculpted gentle cheekbones, a soft natural smile, and Massimo Dutti editorial lookbook elegance. Ensure identical facial features and character identity across all shots.',
   'nordic-studio':
-    'Chloe, a stunning 26-year-old international high-fashion runway model with an effortless messy updo, sculpted high cheekbones, luminous skin, and minimalist Zara Studio editorial campaign aesthetic',
+    'Chloe, a consistent 26-year-old high-fashion runway model with luminous fair porcelain skin, distinct light green-hazel eyes, an effortless textured messy updo with loose wisps, sculpted high cheekbones, well-defined jawline, and minimalist Zara Studio editorial campaign aesthetic. Ensure identical facial features and character identity across all shots.',
   'andalusian-chic':
-    'Lucia, an enchanting 34-year-old Andalusian woman with glossy dark hair, radiant warm smile, elegant posture, and sophisticated boutique guest elegance',
+    'Lucia, an enchanting 34-year-old Andalusian woman with radiant warm olive skin tone, rich dark brown expressive eyes, glossy dark espresso-brown hair, defined warm smile, elegant neck and posture, and sophisticated boutique guest elegance. Ensure identical facial features and character identity across all shots.',
 };
 
 export interface VirtualTryOnResult {
@@ -107,6 +115,37 @@ export const SHOT_CONFIGS: ShotConfig[] = [
 export const SHOT_DIRECTIVES = SHOT_CONFIGS.map((s) => s.directive);
 
 /**
+ * Bloquea y transfiere con precisión milimétrica la identidad facial real desde la foto original
+ * sobre el cuerpo y estilismo generado. Utiliza fal-ai/face-swap para preservar al 100%
+ * la estructura facial, ojos, nariz, boca, sonrisa y tono de piel real.
+ */
+export async function lockFaceIdentity(
+  targetImageUrl: string,
+  realModelDataUri: string,
+  falKey: string
+): Promise<string> {
+  if (!realModelDataUri || !targetImageUrl) return targetImageUrl;
+
+  try {
+    fal.config({ credentials: falKey.trim() });
+    const result = await fal.subscribe('fal-ai/face-swap', {
+      input: {
+        base_image_url: targetImageUrl,
+        swap_image_url: realModelDataUri,
+      } as any,
+      logs: false,
+    });
+
+    const data = result.data as { image?: { url: string }; images?: { url: string }[] };
+    const swappedUrl = data?.image?.url || data?.images?.[0]?.url;
+    return swappedUrl || targetImageUrl;
+  } catch (err) {
+    console.warn('Face Identity Lock fallback (conservando imagen editorial generada):', err);
+    return targetImageUrl;
+  }
+}
+
+/**
  * Executes Virtual Try-On using top-tier Fal.ai models (Nano Banana Pro 2K, FLUX.2 Max HD, FASHN v1.6)
  * Supports both real shop staff with editorial repose and virtual supermodels (Botika / Zara Studio style).
  * Supports both single hero shot and full 3-shot editorial pack (Promise.all in parallel).
@@ -122,7 +161,9 @@ export async function runVirtualTryOn(
   modelMode: ModelMode = 'real',
   editorialRepose = true,
   virtualModel: VirtualModelProfile = 'mediterranean',
-  shotPackMode: ShotPackMode = 'single'
+  shotPackMode: ShotPackMode = 'single',
+  preserveFaceIdentity = true,
+  onStageChange?: (stage: TryOnStage) => void
 ): Promise<VirtualTryOnResult> {
   const photos = (Array.isArray(garmentPhotos) ? garmentPhotos : [garmentPhotos]).filter(Boolean);
   const primaryGarmentDataUri = photos[0] || '';
@@ -171,26 +212,32 @@ export async function runVirtualTryOn(
     if (activeEngine === 'nano-banana-pro') {
       const getPrompt = (directive: string) => {
         if (isVirtual) {
-          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous editorial campaign portrait featuring ${virtualDesc}. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
+          return `[CONSISTENT CHARACTER IDENTITY]: Editorial campaign portrait featuring ${virtualDesc}. Strictly ensure identical facial features, eye shape, smile, and hairstyle across all shots. ${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
         }
         if (editorialRepose) {
-          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from the first image. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
+          return `[CRITICAL IDENTITY LOCK - PRESERVE EXACT REAL FACE]: The model in this photograph MUST BE THE EXACT SAME REAL WOMAN from the first reference image (@image1). Preserve 100% of her authentic facial structure, facial bone contours, eye shape, eye color, nose, smile, teeth, lips, jawline, natural skin tone, and hair texture without beautifying or morphing her into a different person. ${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Professional commercial color grading, soft rim lighting, skin and fabric retouching, Canon EOS R5, 2K resolution.`;
         }
-        return `${directive} Professional high-end fashion e-commerce photography. The exact woman from the first image (preserving 100% of her real facial features, smile, identity, hair, skin tone, and natural body proportions). Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`;
+        return `[CRITICAL IDENTITY LOCK - PRESERVE EXACT REAL FACE & NATURAL POSTURE]: The model in this photograph MUST BE THE EXACT SAME REAL WOMAN from the first reference image (@image1), maintaining 100% of her authentic facial features, smile, eyes, nose, hair, skin tone, natural body proportions, and posture without alterations. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${directive} ${scenePrompt} Shot on 85mm lens, ultra-sharp focus, 2K resolution.`;
       };
 
       const urls = await Promise.all(
         activeDirectives.map(async (directive) => {
           const prompt = getPrompt(directive);
+          const inputPayload: Record<string, any> = {
+            prompt,
+            image_urls: imageUrls,
+            resolution: '2K',
+            aspect_ratio: '3:4',
+            output_format: 'jpeg',
+            safety_tolerance: '5',
+          };
+
+          if (isVirtual && VIRTUAL_MODEL_SEEDS[virtualModel]) {
+            inputPayload.seed = VIRTUAL_MODEL_SEEDS[virtualModel];
+          }
+
           const result = await fal.subscribe('fal-ai/nano-banana-pro/edit', {
-            input: {
-              prompt,
-              image_urls: imageUrls,
-              resolution: '2K',
-              aspect_ratio: '3:4',
-              output_format: 'jpeg',
-              safety_tolerance: '5',
-            } as any,
+            input: inputPayload as any,
             logs: false,
           });
 
@@ -203,18 +250,27 @@ export async function runVirtualTryOn(
         })
       );
 
-      return { primaryUrl: urls[0], allUrls: urls };
+      // Bloqueo de identidad facial al 100% para fotos de personas reales
+      let finalUrls = urls;
+      if (!isVirtual && modelDataUri && preserveFaceIdentity) {
+        onStageChange?.('locking_face_identity');
+        finalUrls = await Promise.all(
+          urls.map((url) => lockFaceIdentity(url, modelDataUri, falKey))
+        );
+      }
+
+      return { primaryUrl: finalUrls[0], allUrls: finalUrls };
     }
 
     if (activeEngine === 'flux-2-max') {
       const getFluxPrompt = (directive: string) => {
         if (isVirtual) {
-          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). A gorgeous portrait featuring ${virtualDesc}. Dress her naturally with ALL garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
+          return `[CONSISTENT CHARACTER IDENTITY]: Editorial campaign portrait featuring ${virtualDesc}. Strictly ensure identical facial features, eye shape, smile, and hairstyle across all shots. ${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Dress her naturally with ALL garments, clothing pieces, and accessories provided in the reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
         }
         if (editorialRepose) {
-          return `${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Preserve 100% of the exact facial identity, facial structure, eyes, smile, and hair of the woman from @image1. Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
+          return `[CRITICAL IDENTITY LOCK - PRESERVE EXACT REAL FACE]: The model in this photograph MUST BE THE EXACT SAME REAL WOMAN from the first reference image (@image1). Preserve 100% of her authentic facial structure, facial bone contours, eye shape, eye color, nose, smile, teeth, lips, jawline, natural skin tone, and hair texture without beautifying or morphing her into a different person. ${directive} High-fashion commercial lookbook campaign photography (Zara / Massimo Dutti / Botika editorial style). Dress her naturally with ALL the garments, clothing pieces, and accessories provided in the subsequent reference images, ensuring perfect fabric textures, natural layering, accurate prints, and tailored fit without any hangers. Create a cohesive, high-end styled outfit. ${scenePrompt} Ultra-sharp commercial photography.`;
         }
-        return `${directive} Professional fashion photography of the exact woman from @image1. Preserve 100% of facial features, hair, and body proportions. Dress her naturally with ALL garments, clothing pieces, and accessories provided in the subsequent reference images without any hangers. ${scenePrompt} Ultra-sharp commercial photography.`;
+        return `[CRITICAL IDENTITY LOCK - PRESERVE EXACT REAL FACE & NATURAL POSTURE]: The model in this photograph MUST BE THE EXACT SAME REAL WOMAN from the first reference image (@image1), maintaining 100% of her authentic facial features, smile, eyes, nose, hair, skin tone, natural body proportions, and posture without alterations. Dress her naturally with ALL garments, clothing pieces, and accessories provided in the subsequent reference images without any hangers. ${directive} ${scenePrompt} Ultra-sharp commercial photography.`;
       };
 
       const urls = await Promise.all(
@@ -238,7 +294,16 @@ export async function runVirtualTryOn(
         })
       );
 
-      return { primaryUrl: urls[0], allUrls: urls };
+      // Bloqueo de identidad facial al 100% para fotos de personas reales
+      let finalUrls = urls;
+      if (!isVirtual && modelDataUri && preserveFaceIdentity) {
+        onStageChange?.('locking_face_identity');
+        finalUrls = await Promise.all(
+          urls.map((url) => lockFaceIdentity(url, modelDataUri, falKey))
+        );
+      }
+
+      return { primaryUrl: finalUrls[0], allUrls: finalUrls };
     }
 
     // Default: fashn-v16 (solo si hay foto real de modelo y prenda única)
@@ -262,7 +327,13 @@ export async function runVirtualTryOn(
       throw new Error('Fal.ai FASHN v1.6 no devolvió ninguna URL de imagen válida.');
     }
 
-    return { primaryUrl: generatedUrl, allUrls: [generatedUrl] };
+    let finalSingleUrl = generatedUrl;
+    if (!isVirtual && modelDataUri && preserveFaceIdentity) {
+      onStageChange?.('locking_face_identity');
+      finalSingleUrl = await lockFaceIdentity(generatedUrl, modelDataUri, falKey);
+    }
+
+    return { primaryUrl: finalSingleUrl, allUrls: [finalSingleUrl] };
   } catch (err: unknown) {
     console.error(`Error en Fal.ai Virtual Try-On (${engine}):`, err);
     const message = err instanceof Error ? err.message : String(err);
@@ -794,7 +865,9 @@ export async function executeLiveTryOnAndCatalog(
       modelMode,
       editorialRepose,
       virtualModel,
-      shotPackMode
+      shotPackMode,
+      params.preserveFaceIdentity !== false,
+      onStageChange
     );
   })();
 
@@ -859,6 +932,7 @@ export async function executeLiveTryOnAndCatalog(
     lookItems: isLookCompleto ? lookItems : undefined,
     modelMode,
     editorialRepose,
+    preserveFaceIdentity: params.preserveFaceIdentity !== false,
     virtualModel,
     tags: metadata.tags,
     price,

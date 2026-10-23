@@ -64,6 +64,7 @@ export interface ProcessPayload {
   customBackgroundImage?: CompressedImageResult | null;
   modelMode: ModelMode;
   editorialRepose: boolean;
+  preserveFaceIdentity: boolean;
   virtualModel: VirtualModelProfile;
 }
 
@@ -179,6 +180,7 @@ export default function LiveCaptureWizard({
   // Model Mode & Profile state
   const [modelMode, setModelMode] = useState<ModelMode>('real');
   const [editorialRepose, setEditorialRepose] = useState<boolean>(true);
+  const [preserveFaceIdentity, setPreserveFaceIdentity] = useState<boolean>(true);
   const [virtualModel, setVirtualModel] = useState<VirtualModelProfile>('mediterranean');
 
   // Real Model state
@@ -436,6 +438,7 @@ export default function LiveCaptureWizard({
       customBackgroundImage: null,
       modelMode,
       editorialRepose,
+      preserveFaceIdentity,
       virtualModel,
     });
   };
@@ -729,6 +732,37 @@ export default function LiveCaptureWizard({
                   {editorialRepose
                     ? 'Pose dinámica de modelo profesional con porte estilizado, giro de 3/4 e iluminación editorial.'
                     : 'Conserva la postura original de la fotografía.'}
+                </p>
+              </div>
+
+              {/* FIJAR IDENTIDAD Y ROSTRO REAL AL 100% */}
+              <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                    <span className="text-xs font-bold text-[#121110] font-serif tracking-wide">
+                      Fijar Rostro e Identidad Real al 100%
+                    </span>
+                    <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#121110] text-[#C5A059]">
+                      Máxima Fidelidad
+                    </span>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={preserveFaceIdentity}
+                      onChange={(e) => setPreserveFaceIdentity(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#121110]"></div>
+                  </label>
+                </div>
+
+                <p className="text-[11px] text-[#7A756D] leading-relaxed">
+                  {preserveFaceIdentity
+                    ? 'Bloquea y transfiere los rasgos exactos de tu cara, ojos, sonrisa y expresión original sobre la pose y estilismo de moda.'
+                    : 'Permite que la IA interprete y adapte el rostro con libertad creativa.'}
                 </p>
               </div>
 
@@ -1715,6 +1749,7 @@ export default function LiveCaptureWizard({
                 {processingStage === 'adjusting_garment' && 'Fase 1/3 · Ajustando caída y proporciones de prenda'}
                 {processingStage === 'adjusting_garment_top' && 'Fase 1/4 · Ajustando parte superior a la silueta'}
                 {processingStage === 'adjusting_garment_bottom' && 'Fase 2/4 · Coordinando parte inferior del conjunto'}
+                {processingStage === 'locking_face_identity' && 'Fase 2/3 · Fijando y perfeccionando rasgos faciales al 100% (Identidad Real)'}
                 {processingStage === 'generating_copy' && 'Fase 2/3 · Generando ficha editorial SEO'}
                 {processingStage === 'replacing_background' && 'Fase 3/3 · Perfeccionando iluminación fotográfica'}
                 {processingStage === 'completed' && 'Fase final · Generación completada con éxito'}
@@ -1734,6 +1769,8 @@ export default function LiveCaptureWizard({
                     ? 'w-1/4'
                     : processingStage === 'adjusting_garment_bottom'
                     ? 'w-2/4'
+                    : processingStage === 'locking_face_identity'
+                    ? 'w-4/5'
                     : processingStage === 'generating_copy'
                     ? 'w-3/4'
                     : processingStage === 'replacing_background'

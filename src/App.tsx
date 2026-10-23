@@ -103,6 +103,7 @@ export default function App() {
         simulationMode: settings.simulationMode,
         modelMode: payload.modelMode,
         editorialRepose: payload.editorialRepose,
+        preserveFaceIdentity: payload.preserveFaceIdentity,
         virtualModel: payload.virtualModel,
         shotPackMode: payload.shotPackMode,
         onStageChange: (stage) => setProcessingStage(stage),
